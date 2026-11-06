@@ -1,16 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Submit refund request{% endblock %}
+{% block title %}New refund request{% endblock %}
 {% block content %}
-<h1>Submit a refund request</h1>
-{% if errors %}<p class="flash-error">Please correct the errors below.</p>{% endif %}
+<a class="back" href="/requests">&larr; All refund requests</a>
+<div class="page-head"><div><h1>New refund request</h1><p class="lead">A reviewer other than you will approve or reject it. No payment is executed.</p></div></div>
+<section class="panel">
+{% if errors %}<p class="notice notice-error" role="alert">Please correct the errors below.</p>{% endif %}
 <form method="post" action="/requests">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <label for="amount">Amount in USD (e.g. 12.50; at most two decimal places)</label>
-  <input type="text" id="amount" name="amount" inputmode="decimal" value="{{ form.get('amount', '') }}" required>
-  {% if errors.amount %}<div class="error">{{ errors.amount }}</div>{% endif %}
-  <label for="reason">Reason</label>
-  <textarea id="reason" name="reason" rows="3" required>{{ form.get('reason', '') }}</textarea>
-  {% if errors.reason %}<div class="error">{{ errors.reason }}</div>{% endif %}
-  <p><button type="submit">Submit request</button></p>
+  <div class="field">
+    <label for="amount">Amount (USD)</label>
+    <div class="money"><span aria-hidden="true">$</span>
+      <input type="text" id="amount" name="amount" inputmode="decimal" autocomplete="off" placeholder="12.50" value="{{ form.get('amount', '') }}" required
+             aria-describedby="amount-hint{% if errors.amount %} amount-err{% endif %}" {% if errors.amount %}aria-invalid="true"{% endif %}></div>
+    <div class="hint" id="amount-hint">Dollars and cents, e.g. 12.50. At most two decimal places.</div>
+    {% if errors.amount %}<div class="field-error" id="amount-err">{{ errors.amount }}</div>{% endif %}
+  </div>
+  <div class="field">
+    <label for="reason">Reason</label>
+    <textarea id="reason" name="reason" rows="3" required {% if errors.reason %}aria-invalid="true" aria-describedby="reason-err"{% endif %}>{{ form.get('reason', '') }}</textarea>
+    {% if errors.reason %}<div class="field-error" id="reason-err">{{ errors.reason }}</div>{% endif %}
+  </div>
+  <div class="actions"><button class="btn btn-primary" type="submit">Submit request</button><a class="btn" href="/requests">Cancel</a></div>
 </form>
+</section>
 {% endblock %}

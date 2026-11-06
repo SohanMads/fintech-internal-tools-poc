@@ -110,7 +110,9 @@ def decide(conn: sqlite3.Connection, actor, request_id: int, decision, reason_ra
             (new_status, actor["id"], reason, at, request_id, actor["id"]),
         )
         if cur.rowcount != 1:
-            raise Conflict("This refund request has already been decided.")
+            raise Conflict("Another reviewer's decision was saved first, so yours was not applied.",
+                           title="This request has already been decided",
+                           back_url=f"/requests/{request_id}", back_label="View the current decision")
         audit.record(conn, request_id=request_id, actor_id=actor["id"], action=new_status,
                      from_status="pending", to_status=new_status, reason=reason, at=at)
     return new_status

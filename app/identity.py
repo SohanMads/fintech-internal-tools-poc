@@ -23,3 +23,11 @@ def has_permission(conn: sqlite3.Connection, user, permission: str) -> bool:
         "SELECT 1 FROM tool_permissions WHERE user_id = ? AND permission = ?",
         (user["id"], permission),
     ).fetchone() is not None
+
+
+def permission_labels(conn: sqlite3.Connection, user) -> list[tuple[str, str]]:
+    """Per-tool access shown in the header, e.g. [("Refunds", "viewer"), ("Flags", "admin")]."""
+    if user is None:
+        return []
+    return [("Refunds", user["role"]),
+            ("Flags", "admin" if has_permission(conn, user, "flags.edit") else "view only")]

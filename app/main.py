@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -13,6 +14,14 @@ from .db import DEFAULT_BUSY_TIMEOUT_MS, DatabaseBusy, connect, init_db
 
 DEMO_BANNER = "Demo identity — not production authentication."
 APPROVED_LABEL = "Approved — payment not executed."
+ERROR_TITLES = {
+    401: "Choose a demo identity first",
+    403: "You don't have permission to do that",
+    404: "We couldn't find that page",
+    409: "This item has changed",
+    422: "Please check what you entered",
+    503: "Please try again in a moment",
+}
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.filters["usd"] = lambda cents: f"${cents // 100:,}.{cents % 100:02d}"
@@ -63,6 +72,8 @@ def create_app(
         finally:
             conn.close()
 
+    app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
+
     app.add_middleware(
         SessionMiddleware,
         secret_key=session_secret,
@@ -97,7 +108,15 @@ def create_app(
         return user
 
     def render(request: Request, name: str, context: dict, conn=None, status_code: int = 200, user=None):
+        labels = []
+        if user is not None:
+            c = open_conn()
+            try:
+                labels = identity.permission_labels(c, user)
+            finally:
+                c.close()
         ctx = {
+            "permission_labels": labels,
             "user": user,
             "csrf_token": csrf_token(request),
             "demo_banner": DEMO_BANNER,
@@ -107,7 +126,8 @@ def create_app(
         ctx.update(context)
         return templates.TemplateResponse(request, name, ctx, status_code=status_code)
 
-    def error_page(request: Request, status_code: int, message: str, user=None, headers=None):
+    def error_page(request: Request, status_code: int, message: str, user=None, headers=None,
+                   title=None, back_url=None, back_label=None):
         if user is None and "session" in request.scope:
             try:
                 conn = open_conn()
@@ -117,7 +137,15 @@ def create_app(
                     conn.close()
             except Exception:
                 user = None
-        resp = render(request, "error.html", {"status_code": status_code, "message": message},
+        in_flags = request.url.path.startswith("/flags")
+        if back_url is None:
+            back_url, back_label = (("/login", "Choose a demo identity") if status_code == 401 else
+                                    ("/flags", "Back to Sandbox Flags") if in_flags else
+                                    ("/requests", "Back to refund requests"))
+        resp = render(request, "error.html", {
+            "status_code": status_code, "message": message,
+            "title": title or ERROR_TITLES.get(status_code, "Something went wrong"),
+            "back_url": back_url, "back_label": back_label},
                       status_code=status_code, user=user)
         if headers:
             resp.headers.update(headers)
@@ -125,7 +153,8 @@ def create_app(
 
     @app.exception_handler(ServiceError)
     async def service_error_handler(request: Request, exc: ServiceError):
-        return error_page(request, exc.status_code, exc.message)
+        return error_page(request, exc.status_code, exc.message, title=exc.title,
+                          back_url=exc.back_url, back_label=exc.back_label)
 
     @app.exception_handler(DatabaseBusy)
     async def busy_handler(request: Request, exc: DatabaseBusy):

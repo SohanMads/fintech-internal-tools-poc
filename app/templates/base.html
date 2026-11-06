@@ -2,50 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Internal Operations{% endblock %} · Internal Operations</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 0; color: #222; }
-    header { background: #1f2937; color: #fff; padding: .6rem 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-    header a { color: #fff; }
-    .banner { background: #fde68a; color: #78350f; padding: .4rem 1rem; font-weight: 600; }
-    main { padding: 1rem; max-width: 960px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border-bottom: 1px solid #ddd; padding: .4rem; text-align: left; vertical-align: top; }
-    .badge { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-size: .85rem; font-weight: 600; white-space: nowrap; }
-    .status-pending { background: #fef3c7; color: #92400e; } .status-approved { background: #d1fae5; color: #065f46; }
-    .status-rejected { background: #fee2e2; color: #991b1b; } .status-enabled { background: #d1fae5; color: #065f46; }
-    .status-disabled { background: #e5e7eb; color: #374151; }
-    header nav a { padding: .2rem .5rem; border-radius: 4px; text-decoration: none; }
-    header nav a.active { background: #374151; font-weight: 600; }
-    .note { background: #e0f2fe; color: #075985; padding: .5rem; border-left: 4px solid #0284c7; }
-    th { background: #f9fafb; } time { white-space: nowrap; }
-    button { padding: .3rem .8rem; }
-    .error { color: #991b1b; } .flash-error { background: #fee2e2; padding: .5rem; }
-    form.inline { display: inline; }
-    label { display: block; margin-top: .6rem; }
-    textarea, input[type=text] { width: 100%; max-width: 480px; }
-    .muted { color: #666; }
-  </style>
+  <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-  <div class="banner" role="note">{{ demo_banner }} Local prototype with synthetic data only; no payments are executed.</div>
-  <header>
-    <strong>Internal Operations</strong>
-    <nav aria-label="Tools">
-      <a href="/requests" class="{{ 'active' if nav == 'refunds' }}">Refunds</a>
-      <a href="/flags" class="{{ 'active' if nav == 'flags' }}">Sandbox Flags</a>
-    </nav>
-    {% if user %}
-      <span>Signed in as <strong>{{ user.display_name }}</strong> ({{ user.role }})</span>
-      <a href="/login">Switch identity</a>
-      <form class="inline" method="post" action="/logout">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button type="submit">Sign out</button>
-      </form>
-    {% else %}
-      <a href="/login">Choose demo identity</a>
-    {% endif %}
+  <div class="demo-banner" role="note"><div class="container"><strong>{{ demo_banner }}</strong> Synthetic-data demo with simulated sign-in; no payments are executed.</div></div>
+  <header class="topbar">
+    <div class="container">
+      <a class="brand" href="/requests">Internal Operations</a>
+      <nav class="tools" aria-label="Tools">
+        <a href="/requests" {% if nav == 'refunds' %}aria-current="page"{% endif %}>Refunds</a>
+        <a href="/flags" {% if nav == 'flags' %}aria-current="page"{% endif %}>Sandbox Flags</a>
+      </nav>
+      <div class="identity">
+      {% if user %}
+        <span>Signed in as <strong>{{ user.display_name }}</strong></span>
+        <span class="perm" aria-label="Your permissions">{% for tool, level in permission_labels %}{{ tool }}: {{ level }}{% if not loop.last %} · {% endif %}{% endfor %}</span>
+        <a href="/login">Switch identity</a>
+        <form method="post" action="/logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-small" type="submit">Sign out</button>
+        </form>
+      {% else %}
+        <a href="/login">Choose demo identity</a>
+      {% endif %}
+      </div>
+    </div>
   </header>
-  <main>{% block content %}{% endblock %}</main>
+  <main class="container">{% block content %}{% endblock %}</main>
 </body>
 </html>

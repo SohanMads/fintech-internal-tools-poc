@@ -1,20 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Sandbox Flags{% endblock %}
 {% block content %}
-<h1>Sandbox Flags</h1>
-<p class="note"><strong>Sandbox only:</strong> these settings are not connected to a live application. Changing them only records the new value and an audit event.</p>
-<p class="muted">{% if can_edit %}You hold the flag administrator grant: open a flag to enable or disable it.{% else %}You can view flags. Only the flag administrator can change them.{% endif %}</p>
+<div class="page-head">
+  <div><h1>Sandbox Flags</h1><p class="lead">Synthetic feature flags used to test reuse of the shared foundation.</p></div>
+  <span class="access {{ 'access-edit' if can_edit }}">{{ 'Your access: can edit' if can_edit else 'Your access: view only' }}</span>
+</div>
+<p class="notice notice-info"><strong>Sandbox only:</strong> these settings are not connected to a live application. Changing one records the new value and an audit event; nothing else happens.</p>
+<div class="panel flush table-wrap">
 <table>
-  <thead><tr><th>Flag</th><th>Description</th><th>Status</th><th>Last changed</th></tr></thead>
+  <thead><tr><th>Flag</th><th>Description</th><th>Status</th><th>Last change</th></tr></thead>
   <tbody>
   {% for f in flags %}
     <tr>
-      <td><a href="/flags/{{ f.id }}">{{ f.name }}</a><br><code class="muted">{{ f.key }}</code></td>
+      <td><a href="/flags/{{ f.id }}">{{ f.name }}</a><br><code>{{ f.key }}</code></td>
       <td>{{ f.description }}</td>
       <td><span class="badge status-{{ 'enabled' if f.enabled else 'disabled' }}">{{ 'Enabled' if f.enabled else 'Disabled' }}</span></td>
-      <td>{% if f.updated_at %}<time>{{ f.updated_at|ts }}</time> by {{ f.updated_by_name }}{% else %}<span class="muted">Seeded, never changed</span>{% endif %}</td>
+      <td>{% if f.updated_at %}<time datetime="{{ f.updated_at }}">{{ f.updated_at|ts }}</time><br><span class="muted">by {{ f.updated_by_name }}</span>{% else %}<span class="muted">Seeded, never changed</span>{% endif %}</td>
     </tr>
+  {% else %}
+    <tr><td colspan="4" class="empty">No sandbox flags are defined.</td></tr>
   {% endfor %}
   </tbody>
 </table>
+</div>
+<p class="muted">{% if can_edit %}Open a flag to enable or disable it.{% else %}Only the flag administrator can change flags.{% endif %}</p>
 {% endblock %}

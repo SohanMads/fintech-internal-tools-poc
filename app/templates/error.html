@@ -1,7 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Error {{ status_code }}{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 {% block content %}
-<h1>Error {{ status_code }}</h1>
-<p class="flash-error">{{ message }}</p>
-<p><a href="/requests">Back to queue</a></p>
+<section class="panel" role="alert">
+  <p class="muted">Error {{ status_code }}</p>
+  <h1>{{ title }}</h1>
+  <p>{{ message }}</p>
+  <div class="actions"><a class="btn btn-primary" href="{{ back_url }}">{{ back_label }}</a></div>
+</section>
 {% endblock %}

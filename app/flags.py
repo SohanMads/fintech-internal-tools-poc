@@ -33,6 +33,15 @@ def history(conn: sqlite3.Connection, flag_id: int) -> list[sqlite3.Row]:
     return audit.history(conn, flag_id=flag_id)
 
 
+def _stale(flag_id: int, message: str | None = None) -> Conflict:
+    return Conflict(
+        message or "Someone saved a change to this flag after you opened the form, so your change was not applied.",
+        title="This setting has changed",
+        back_url=f"/flags/{flag_id}",
+        back_label="View the latest version of this flag",
+    )
+
+
 def set_flag(conn: sqlite3.Connection, actor, flag_id: int, desired, reason_raw, expected_version_raw) -> bool:
     """Enable/disable a flag if it is still at expected_version (optimistic concurrency)."""
     if not can_edit(conn, actor):
@@ -58,16 +67,16 @@ def set_flag(conn: sqlite3.Connection, actor, flag_id: int, desired, reason_raw,
         if row is None:
             raise NotFound("Flag not found.")
         if row["version"] != expected_version:
-            raise Conflict("This flag changed after you loaded the page. Reload to see the latest value.")
+            raise _stale(flag_id)
         if row["enabled"] == new_enabled:
-            raise Conflict(f"This flag is already {'enabled' if new_enabled else 'disabled'}.")
+            raise _stale(flag_id, f"This flag is already {'enabled' if new_enabled else 'disabled'}.")
         cur = conn.execute(
             "UPDATE feature_flags SET enabled = ?, version = version + 1, updated_at = ?, updated_by = ?"
             " WHERE id = ? AND version = ?",
             (new_enabled, at, actor["id"], flag_id, expected_version),
         )
         if cur.rowcount != 1:
-            raise Conflict("This flag changed after you loaded the page. Reload to see the latest value.")
+            raise _stale(flag_id)
         old, new = ("enabled" if row["enabled"] else "disabled"), ("enabled" if new_enabled else "disabled")
         audit.record(conn, flag_id=flag_id, actor_id=actor["id"], action=f"flag_{new}",
                      from_status=old, to_status=new, reason=reason, at=at)

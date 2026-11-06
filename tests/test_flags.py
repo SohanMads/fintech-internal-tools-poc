@@ -134,3 +134,19 @@ def test_audit_rows_must_target_exactly_one_tool(conn, users):
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute("INSERT INTO audit_events (request_id, flag_id, actor_id, action, to_status, reason, created_at)"
                      " VALUES (NULL, ?, ?, 'approved', 'approved', 'x', 'now')", (flag["id"], users["fiona"]["id"]))
+
+
+def test_stale_conflict_page_links_to_latest_flag(as_user, conn):
+    fiona = as_user("fiona")
+    stale = flag_row(conn)
+    assert change(fiona, stale).status_code == 303
+    r = change(fiona, stale)
+    assert r.status_code == 409
+    assert "This setting has changed" in r.text
+    assert f'href="/flags/{stale["id"]}"' in r.text
+    assert 'href="/requests">Back' not in r.text
+
+
+def test_header_shows_per_tool_permissions(as_user):
+    assert "Refunds: viewer · Flags: admin" in as_user("fiona").get("/flags").text
+    assert "Refunds: reviewer · Flags: view only" in as_user("rita").get("/flags").text
