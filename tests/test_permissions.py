@@ -66,11 +66,11 @@ def test_self_approval_forbidden(as_user, conn):
 
 def test_client_supplied_role_and_actor_are_ignored(as_user, conn, users):
     viewer = as_user("victor")
-    r = viewer.post("/requests", {"amount_cents": "100", "reason": "x", "role": "reviewer",
+    r = viewer.post("/requests", {"amount": "1.00", "reason": "x", "role": "reviewer",
                                   "submitted_by": str(users["olivia"]["id"])})
     assert r.status_code == 403
     olivia = as_user("olivia")
-    rid = created_id(olivia.post("/requests", {"amount_cents": "100", "reason": "x",
+    rid = created_id(olivia.post("/requests", {"amount": "1.00", "reason": "x",
                                                 "submitted_by": str(users["rita"]["id"]),
                                                 "actor_id": str(users["rita"]["id"])}))
     row = conn.execute("SELECT submitted_by FROM refund_requests WHERE id=?", (rid,)).fetchone()
@@ -81,8 +81,8 @@ def test_client_supplied_role_and_actor_are_ignored(as_user, conn, users):
 
 def test_csrf_required_for_mutations(as_user, conn, users):
     olivia = as_user("olivia")
-    assert olivia.post("/requests", {"amount_cents": "100", "reason": "x"}, csrf=False).status_code == 403
-    r = olivia.client.post("/requests", data={"amount_cents": "100", "reason": "x", "csrf_token": "forged"})
+    assert olivia.post("/requests", {"amount": "1.00", "reason": "x"}, csrf=False).status_code == 403
+    r = olivia.client.post("/requests", data={"amount": "1.00", "reason": "x", "csrf_token": "forged"})
     assert r.status_code == 403
     assert count(conn, "refund_requests") == 0
     anon = as_user()

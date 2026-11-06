@@ -8,7 +8,7 @@ def counts(conn):
                  for t in ("refund_requests", "audit_events"))
 
 
-@pytest.mark.parametrize("amount", ["0", "-5", "10.50", "abc", "", "1e3", "100000001", " "])
+@pytest.mark.parametrize("amount", ["0", "0.00", "-5", "10.505", "12.", ".5", "1,000", "$5", "abc", "", "1e3", "NaN", "1000000.01", " "])
 def test_invalid_amount_rejected(as_user, conn, amount):
     r = as_user("olivia").submit(amount=amount)
     assert r.status_code == 422
@@ -22,7 +22,7 @@ def test_blank_reason_rejected(as_user, conn, reason):
 
 
 def test_reason_is_trimmed(as_user, conn):
-    rid = created_id(as_user("olivia").submit(amount=" 1250 ", reason="  Duplicate charge  "))
+    rid = created_id(as_user("olivia").submit(amount=" 12.50 ", reason="  Duplicate charge  "))
     row = conn.execute("SELECT amount_cents, reason FROM refund_requests WHERE id=?", (rid,)).fetchone()
     assert tuple(row) == (1250, "Duplicate charge")
 

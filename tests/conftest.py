@@ -4,7 +4,7 @@ import pytest
 
 from fastapi.testclient import TestClient
 
-from app import services
+from app import refunds as services
 from app.db import connect
 from app.main import create_app
 
@@ -57,8 +57,8 @@ class UserClient:
             data["csrf_token"] = self.csrf()
         return self.client.post(path, data=data)
 
-    def submit(self, amount="1000", reason="Synthetic refund"):
-        return self.post("/requests", {"amount_cents": amount, "reason": reason})
+    def submit(self, amount="10.00", reason="Synthetic refund"):
+        return self.post("/requests", {"amount": amount, "reason": reason})
 
     def decide(self, request_id, decision="approve", reason="Checked"):
         return self.post(f"/requests/{request_id}/decision", {"decision": decision, "reason": reason})

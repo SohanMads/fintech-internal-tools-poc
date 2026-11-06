@@ -4,12 +4,12 @@
 <p><a href="/requests">&larr; Back to queue</a></p>
 <h1>Refund request #{{ r.id }}</h1>
 <table>
-  <tr><th>Status</th><td class="status-{{ r.status }}">{% if r.status == "approved" %}{{ approved_label }}{% else %}{{ r.status|capitalize }}{% endif %}</td></tr>
+  <tr><th>Status</th><td><span class="badge status-{{ r.status }}">{% if r.status == "approved" %}{{ approved_label }}{% else %}{{ r.status|capitalize }}{% endif %}</span></td></tr>
   <tr><th>Amount</th><td>{{ r.amount_cents|usd }} ({{ r.amount_cents }} cents)</td></tr>
   <tr><th>Reason</th><td>{{ r.reason }}</td></tr>
-  <tr><th>Submitted by</th><td>{{ r.submitter_name }} at {{ r.created_at }} UTC</td></tr>
+  <tr><th>Submitted by</th><td>{{ r.submitter_name }} at <time>{{ r.created_at|ts }}</time></td></tr>
   {% if r.status != "pending" %}
-  <tr><th>Decided by</th><td>{{ r.decider_name }} at {{ r.decided_at }} UTC</td></tr>
+  <tr><th>Decided by</th><td>{{ r.decider_name }} at <time>{{ r.decided_at|ts }}</time></td></tr>
   <tr><th>Decision reason</th><td>{{ r.decision_reason }}</td></tr>
   {% endif %}
 </table>
@@ -34,11 +34,11 @@
 
 <h2>Audit history</h2>
 <table>
-  <thead><tr><th>When (UTC)</th><th>Actor</th><th>Action</th><th>Status change</th><th>Reason</th></tr></thead>
+  <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Status change</th><th>Reason</th></tr></thead>
   <tbody>
   {% for a in audit %}
     <tr>
-      <td>{{ a.created_at }}</td>
+      <td><time>{{ a.created_at|ts }}</time></td>
       <td>{{ a.actor_name }} ({{ a.actor_role }})</td>
       <td>{{ a.action }}</td>
       <td>{{ a.from_status or "—" }} &rarr; {{ a.to_status }}</td>

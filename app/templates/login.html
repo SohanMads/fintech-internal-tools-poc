@@ -3,12 +3,12 @@
 {% block content %}
 <h1>Choose a demo identity</h1>
 <p><strong>{{ demo_banner }}</strong></p>
-<p class="muted">Anyone using this demo can impersonate any seeded user. It demonstrates authorization rules under a simulated identity; it is not secure authentication. Roles are read from the server-side users table.</p>
+<p class="muted">Anyone using this demo can impersonate any seeded user. It demonstrates authorization rules under a simulated identity; it is not secure authentication. Roles and grants are read from the server-side database, never from the browser.</p>
 <form method="post" action="/login">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   {% for u in users %}
     <label><input type="radio" name="user_id" value="{{ u.id }}" {% if user and user.id == u.id %}checked{% endif %} required>
-      {{ u.display_name }} — {{ u.role }}</label>
+      {{ u.display_name }} — refunds: {{ u.role }}{% if u.grants %}; extra grants: {{ u.grants }}{% endif %}</label>
   {% endfor %}
   <p><button type="submit">Use this identity</button></p>
 </form>

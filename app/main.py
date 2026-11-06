@@ -7,7 +7,8 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import services
+from . import flags, identity, refunds
+from .errors import NotFound, ServiceError, ValidationFailed
 from .db import DEFAULT_BUSY_TIMEOUT_MS, DatabaseBusy, connect, init_db
 
 DEMO_BANNER = "Demo identity — not production authentication."
@@ -15,6 +16,7 @@ APPROVED_LABEL = "Approved — payment not executed."
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.filters["usd"] = lambda cents: f"${cents // 100:,}.{cents % 100:02d}"
+templates.env.filters["ts"] = lambda iso: (iso or "").replace("T", " ").replace("+00:00", "")[:16] + " UTC" if iso else "—"
 
 
 def _env_flag(name: str) -> bool:
@@ -38,7 +40,7 @@ def create_app(
 ) -> FastAPI:
     if demo_mode is None:
         demo_mode = _env_flag("DEMO_MODE")
-    app = FastAPI(title="Refund Approval POC", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="Internal Operations POC", docs_url=None, redoc_url=None, openapi_url=None)
 
     if not demo_mode:
         # Fail closed: no real authentication exists, so without demo mode nothing is served.
@@ -57,7 +59,7 @@ def create_app(
     if seed_requests:
         conn = connect(db_path, busy_timeout_ms)
         try:
-            services.seed_demo_requests(conn)
+            refunds.seed_demo_requests(conn)
         finally:
             conn.close()
 
@@ -89,7 +91,7 @@ def create_app(
         return form
 
     def current_user(request: Request, conn):
-        user = services.get_user(conn, request.session.get("user_id"))
+        user = identity.get_user(conn, request.session.get("user_id"))
         if user is None:
             request.session.pop("user_id", None)
         return user
@@ -100,6 +102,7 @@ def create_app(
             "csrf_token": csrf_token(request),
             "demo_banner": DEMO_BANNER,
             "approved_label": APPROVED_LABEL,
+            "nav": "flags" if request.url.path.startswith("/flags") else "refunds",
         }
         ctx.update(context)
         return templates.TemplateResponse(request, name, ctx, status_code=status_code)
@@ -120,8 +123,8 @@ def create_app(
             resp.headers.update(headers)
         return resp
 
-    @app.exception_handler(services.ServiceError)
-    async def service_error_handler(request: Request, exc: services.ServiceError):
+    @app.exception_handler(ServiceError)
+    async def service_error_handler(request: Request, exc: ServiceError):
         return error_page(request, exc.status_code, exc.message)
 
     @app.exception_handler(DatabaseBusy)
@@ -153,7 +156,7 @@ def create_app(
     def login_page(request: Request):
         conn = open_conn()
         try:
-            return render(request, "login.html", {"users": services.list_users(conn)},
+            return render(request, "login.html", {"users": identity.list_users(conn)},
                           user=current_user(request, conn))
         finally:
             conn.close()
@@ -164,7 +167,7 @@ def create_app(
         conn = open_conn()
         try:
             try:
-                user = services.get_user(conn, int(form.get("user_id", "")))
+                user = identity.get_user(conn, int(form.get("user_id", "")))
             except ValueError:
                 user = None
             if user is None:
@@ -187,11 +190,11 @@ def create_app(
         conn = open_conn()
         try:
             user = require_user(request, conn)
-            status = status if status in services.STATUSES else "all"
-            rows = services.list_requests(conn, None if status == "all" else status)
+            status = status if status in refunds.STATUSES else "all"
+            rows = refunds.list_requests(conn, None if status == "all" else status)
             return render(request, "queue.html", {
-                "requests": rows, "status": status, "statuses": services.STATUSES,
-                "can_submit": services.can_submit(user),
+                "requests": rows, "status": status, "statuses": refunds.STATUSES,
+                "can_submit": refunds.can_submit(user),
             }, user=user)
         finally:
             conn.close()
@@ -201,8 +204,8 @@ def create_app(
         conn = open_conn()
         try:
             user = require_user(request, conn)
-            if not services.can_submit(user):
-                raise services.Forbidden("Your role is not allowed to submit refund requests.")
+            if not refunds.can_submit(user):
+                raise refunds.Forbidden("Your role is not allowed to submit refund requests.")
             return render(request, "new.html", {"errors": {}, "form": {}}, user=user)
         finally:
             conn.close()
@@ -214,9 +217,9 @@ def create_app(
         try:
             user = require_user(request, conn)
             try:
-                request_id = services.create_request(
-                    conn, user, form.get("amount_cents"), form.get("reason"))
-            except services.ValidationFailed as exc:
+                request_id = refunds.create_request(
+                    conn, user, form.get("amount"), form.get("reason"))
+            except ValidationFailed as exc:
                 return render(request, "new.html", {"errors": exc.errors, "form": form},
                               status_code=422, user=user)
             return RedirectResponse(f"/requests/{request_id}", status_code=303)
@@ -224,13 +227,13 @@ def create_app(
             conn.close()
 
     def detail_response(request, conn, user, request_id: int, errors=None, form=None, status_code=200):
-        row = services.get_request(conn, request_id)
+        row = refunds.get_request(conn, request_id)
         if row is None:
-            raise services.NotFound("Refund request not found.")
+            raise NotFound("Refund request not found.")
         return render(request, "detail.html", {
             "r": row,
-            "audit": services.audit_history(conn, request_id),
-            "can_decide": services.can_decide(user, row),
+            "audit": refunds.audit_history(conn, request_id),
+            "can_decide": refunds.can_decide(user, row),
             "errors": errors or {},
             "form": form or {},
         }, status_code=status_code, user=user)
@@ -251,13 +254,56 @@ def create_app(
         try:
             user = require_user(request, conn)
             try:
-                services.decide(conn, user, request_id, form.get("decision"), form.get("reason"))
-            except services.ValidationFailed as exc:
-                if services.get_request(conn, request_id) is None:
-                    raise services.NotFound("Refund request not found.")
+                refunds.decide(conn, user, request_id, form.get("decision"), form.get("reason"))
+            except ValidationFailed as exc:
+                if refunds.get_request(conn, request_id) is None:
+                    raise NotFound("Refund request not found.")
                 return detail_response(request, conn, user, request_id,
                                        errors=exc.errors, form=form, status_code=422)
             return RedirectResponse(f"/requests/{request_id}", status_code=303)
+        finally:
+            conn.close()
+
+    # --- Sandbox flags (tool-specific rules live in app/flags.py) ---
+
+    def flag_response(request, conn, user, flag_id: int, errors=None, form=None, status_code=200):
+        flag = flags.get_flag(conn, flag_id)
+        if flag is None:
+            raise NotFound("Flag not found.")
+        return render(request, "flag_detail.html", {
+            "flag": flag, "audit": flags.history(conn, flag_id),
+            "can_edit": flags.can_edit(conn, user), "errors": errors or {}, "form": form or {},
+        }, status_code=status_code, user=user)
+
+    @app.get("/flags", response_class=HTMLResponse)
+    def flag_list(request: Request):
+        conn = open_conn()
+        try:
+            user = require_user(request, conn)
+            return render(request, "flags.html", {
+                "flags": flags.list_flags(conn), "can_edit": flags.can_edit(conn, user)}, user=user)
+        finally:
+            conn.close()
+
+    @app.get("/flags/{flag_id}", response_class=HTMLResponse)
+    def flag_detail(request: Request, flag_id: int):
+        conn = open_conn()
+        try:
+            return flag_response(request, conn, require_user(request, conn), flag_id)
+        finally:
+            conn.close()
+
+    @app.post("/flags/{flag_id}")
+    async def flag_update(request: Request, flag_id: int):
+        form = await checked_form(request)
+        conn = open_conn()
+        try:
+            user = require_user(request, conn)
+            try:
+                flags.set_flag(conn, user, flag_id, form.get("desired"), form.get("reason"), form.get("version"))
+            except ValidationFailed as exc:
+                return flag_response(request, conn, user, flag_id, errors=exc.errors, form=form, status_code=422)
+            return RedirectResponse(f"/flags/{flag_id}", status_code=303)
         finally:
             conn.close()
 

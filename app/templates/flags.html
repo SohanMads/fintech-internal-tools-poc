@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Sandbox Flags{% endblock %}
+{% block content %}
+<h1>Sandbox Flags</h1>
+<p class="note"><strong>Sandbox only:</strong> these settings are not connected to a live application. Changing them only records the new value and an audit event.</p>
+<p class="muted">{% if can_edit %}You hold the flag administrator grant: open a flag to enable or disable it.{% else %}You can view flags. Only the flag administrator can change them.{% endif %}</p>
+<table>
+  <thead><tr><th>Flag</th><th>Description</th><th>Status</th><th>Last changed</th></tr></thead>
+  <tbody>
+  {% for f in flags %}
+    <tr>
+      <td><a href="/flags/{{ f.id }}">{{ f.name }}</a><br><code class="muted">{{ f.key }}</code></td>
+      <td>{{ f.description }}</td>
+      <td><span class="badge status-{{ 'enabled' if f.enabled else 'disabled' }}">{{ 'Enabled' if f.enabled else 'Disabled' }}</span></td>
+      <td>{% if f.updated_at %}<time>{{ f.updated_at|ts }}</time> by {{ f.updated_by_name }}{% else %}<span class="muted">Seeded, never changed</span>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

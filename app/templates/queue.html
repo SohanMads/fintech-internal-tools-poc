@@ -10,15 +10,15 @@
 </nav>
 {% if can_submit %}<p><a href="/requests/new">+ Submit a refund request</a></p>{% endif %}
 <table>
-  <thead><tr><th>ID</th><th>Amount</th><th>Status</th><th>Submitted by</th><th>Created (UTC)</th><th>Reason</th></tr></thead>
+  <thead><tr><th>ID</th><th>Amount</th><th>Status</th><th>Submitted by</th><th>Created</th><th>Reason</th></tr></thead>
   <tbody>
   {% for r in requests %}
     <tr>
       <td><a href="/requests/{{ r.id }}">#{{ r.id }}</a></td>
       <td>{{ r.amount_cents|usd }}</td>
-      <td class="status-{{ r.status }}">{% if r.status == "approved" %}{{ approved_label }}{% else %}{{ r.status|capitalize }}{% endif %}</td>
+      <td><span class="badge status-{{ r.status }}">{% if r.status == "approved" %}{{ approved_label }}{% else %}{{ r.status|capitalize }}{% endif %}</span></td>
       <td>{{ r.submitter_name }}</td>
-      <td>{{ r.created_at }}</td>
+      <td><time>{{ r.created_at|ts }}</time></td>
       <td>{{ r.reason }}</td>
     </tr>
   {% else %}

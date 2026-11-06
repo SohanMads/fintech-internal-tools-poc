@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Flag {{ flag.name }}{% endblock %}
+{% block content %}
+<p><a href="/flags">&larr; Back to Sandbox Flags</a></p>
+<h1>{{ flag.name }}</h1>
+<p class="note"><strong>Sandbox only:</strong> this setting is not connected to a live application.</p>
+<table>
+  <tr><th>Key</th><td><code>{{ flag.key }}</code></td></tr>
+  <tr><th>Description</th><td>{{ flag.description }}</td></tr>
+  <tr><th>Status</th><td><span class="badge status-{{ 'enabled' if flag.enabled else 'disabled' }}">{{ 'Enabled' if flag.enabled else 'Disabled' }}</span></td></tr>
+  <tr><th>Version</th><td>{{ flag.version }}</td></tr>
+  <tr><th>Last changed</th><td>{% if flag.updated_at %}<time>{{ flag.updated_at|ts }}</time> by {{ flag.updated_by_name }}{% else %}Seeded, never changed{% endif %}</td></tr>
+</table>
+
+{% if can_edit %}
+<h2>{{ 'Disable' if flag.enabled else 'Enable' }} this flag</h2>
+{% if errors %}<p class="flash-error">Please correct the errors below.</p>{% endif %}
+<form method="post" action="/flags/{{ flag.id }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="version" value="{{ flag.version }}">
+  <input type="hidden" name="desired" value="{{ 'disable' if flag.enabled else 'enable' }}">
+  <label for="reason">Reason for change (required)</label>
+  <textarea id="reason" name="reason" rows="3" required>{{ form.get('reason', '') }}</textarea>
+  {% for key in ('reason', 'desired', 'version') %}{% if errors[key] %}<div class="error">{{ errors[key] }}</div>{% endif %}{% endfor %}
+  <p><button type="submit">{{ 'Disable' if flag.enabled else 'Enable' }} flag</button></p>
+</form>
+{% else %}
+<p class="muted">Read-only: only the flag administrator can change sandbox flags.</p>
+{% endif %}
+
+<h2>Audit history</h2>
+<table>
+  <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Status change</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for a in audit %}
+    <tr>
+      <td><time>{{ a.created_at|ts }}</time></td>
+      <td>{{ a.actor_name }}</td>
+      <td>{{ a.action }}</td>
+      <td>{{ a.from_status }} &rarr; {{ a.to_status }}</td>
+      <td>{{ a.reason }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">No changes recorded yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -3,7 +3,8 @@ import threading
 
 import pytest
 
-from app import services
+from app import audit
+from app import refunds as services
 from app.db import DatabaseBusy, connect
 
 from app.main import create_app
@@ -84,7 +85,7 @@ def test_audit_matches_every_change(as_user, conn, users):
 def test_audit_failure_rolls_back_create(conn, users, monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("audit write failed")
-    monkeypatch.setattr(services, "_insert_audit", boom)
+    monkeypatch.setattr(audit, "record", boom)
     with pytest.raises(RuntimeError):
         services.create_request(conn, users["olivia"], "100", "x")
     assert conn.execute("SELECT COUNT(*) FROM refund_requests").fetchone()[0] == 0
@@ -95,7 +96,7 @@ def test_audit_failure_rolls_back_decision(conn, users, monkeypatch):
 
     def boom(*a, **k):
         raise RuntimeError("audit write failed")
-    monkeypatch.setattr(services, "_insert_audit", boom)
+    monkeypatch.setattr(audit, "record", boom)
     with pytest.raises(RuntimeError):
         services.decide(conn, users["raj"], rid, "approve", "ok")
     row = conn.execute("SELECT status, decided_by FROM refund_requests WHERE id=?", (rid,)).fetchone()
@@ -114,7 +115,7 @@ def test_busy_database_returns_retryable_error(db_path, conn, users):
         with pytest.raises(DatabaseBusy):
             services.create_request(short, users["olivia"], "100", "x")
         short.close()
-        r = olivia.client.post("/requests", data={"csrf_token": token, "amount_cents": "100", "reason": "x"})
+        r = olivia.client.post("/requests", data={"csrf_token": token, "amount": "1.00", "reason": "x"})
         assert r.status_code == 503
         assert r.headers["retry-after"] == "1"
     finally:
