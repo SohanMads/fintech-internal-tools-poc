@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Refund queue{% endblock %}
+{% block content %}
+<h1>Refund requests</h1>
+<nav aria-label="Status filter">
+  Filter:
+  {% for s in ("all",) + statuses %}
+    {% if s == status %}<strong>{{ s|capitalize }}</strong>{% else %}<a href="/requests?status={{ s }}">{{ s|capitalize }}</a>{% endif %}{% if not loop.last %} | {% endif %}
+  {% endfor %}
+</nav>
+{% if can_submit %}<p><a href="/requests/new">+ Submit a refund request</a></p>{% endif %}
+<table>
+  <thead><tr><th>ID</th><th>Amount</th><th>Status</th><th>Submitted by</th><th>Created (UTC)</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for r in requests %}
+    <tr>
+      <td><a href="/requests/{{ r.id }}">#{{ r.id }}</a></td>
+      <td>{{ r.amount_cents|usd }}</td>
+      <td class="status-{{ r.status }}">{% if r.status == "approved" %}{{ approved_label }}{% else %}{{ r.status|capitalize }}{% endif %}</td>
+      <td>{{ r.submitter_name }}</td>
+      <td>{{ r.created_at }}</td>
+      <td>{{ r.reason }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="muted">No refund requests match this filter.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
