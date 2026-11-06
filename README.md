@@ -210,7 +210,7 @@ Source: the Devin session's event log timestamps (server-recorded, UTC); the VM 
 | Extension requested | 17:59:16 |
 | Extension cap (40 min) | 18:39:16 |
 
-The extension and the final polish pass (requested 18:03 EST, capped at 20 minutes) each finished within their caps; exact finish times are in the session log and PR commit history. These are wall-clock timestamps from one session; they are not a measured estimate of engineering effort and should not be extrapolated to other applications.
+The extension and the final polish pass (requested 18:04:28 EST, capped at 20 minutes) each finished within their caps; exact finish times are in the session log and PR commit history. These are wall-clock timestamps from one session; they are not a measured estimate of engineering effort and should not be extrapolated to other applications.
 
 ## Known limitations
 
