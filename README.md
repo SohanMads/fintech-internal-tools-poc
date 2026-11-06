@@ -20,7 +20,9 @@ python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements-dev.txt
 
-DEMO_MODE=true uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
+export DEMO_MODE=true                                                  # required; without it every page returns 503
+export SESSION_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"  # optional; keeps sessions across restarts
+uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
 # open http://127.0.0.1:8000
 ```
 
@@ -121,7 +123,7 @@ flowchart LR
   Review -->|changes requested| Devin
 ```
 
-There is no CI pipeline yet; reviewers run `python -m pytest -q` themselves.
+CI: `.github/workflows/tests.yml` runs `python -m pytest -q` on Python 3.10 for pull requests and pushes to `main`. Tests use a temporary SQLite file per test and a fixed test session secret; no credentials or deployment.
 
 ### Schema
 
@@ -141,7 +143,7 @@ Foreign keys are enabled on every connection.
 The refund-only `audit_events` had `request_id NOT NULL`. The change: make `request_id` nullable, add nullable `flag_id`, and add a CHECK that exactly one target is set. SQLite cannot relax `NOT NULL` in place, so `init_db` rebuilds the table once (create new → copy all rows with `flag_id = NULL` → drop → rename) in one transaction, verifies the row count and `PRAGMA foreign_key_check`, and rolls back if either fails. Existing ids and history are kept. This was checked on a test database and on the existing local demo database (7 refund audit rows before and after).
 
 - **Why this:** one audit table and one `audit.record()` / `audit.history()` for both tools, with real foreign keys to each target table.
-- **Cost:** each new tool that needs auditing adds another nullable FK column and widens the CHECK, so this does not scale to many tools. Alternatives: a separate audit table per tool (no migration, but duplicated audit code), or a generic `target_type` + `target_id` pair (scales, but loses foreign-key enforcement). For two tools, the nullable-FK version was the smallest change that kept integrity checks.
+- **Cost:** this keeps real relational references for these two tools, but each additional audited resource type needs a schema change (a new nullable FK column, a wider CHECK, and a table rebuild in SQLite). It can support more tools; it just requires a migration for each one. Alternatives: a separate audit table per tool (no migration, but duplicated audit code), or a generic `target_type` + `target_id` pair (scales, but loses foreign-key enforcement). For two tools, the nullable-FK version was the smallest change that kept integrity checks.
 
 ### Atomicity and conflicts
 
@@ -183,14 +185,16 @@ The application only ever inserts into `audit_events`; it has no code path that 
 
 ## Test results
 
-`python -m pytest -q` → **82 passed** (run on this branch before the commit; previously 35 for the refund-only version).
+`python -m pytest -q` → **84 passed** locally, in a clean clone, and in GitHub Actions (previously 35 for the refund-only version).
+
+**Reproducibility check:** a fresh `git clone` of this branch into an empty directory, `python3 -m venv .venv`, `pip install -r requirements-dev.txt`, `python -m pytest -q` (84 passed), then `uvicorn` with `DEMO_MODE=true`, a generated `SESSION_SECRET` and a new `DATABASE_PATH`: `/login` 200, `/static/app.css` 200, anonymous `/requests` 303 to login, and without `DEMO_MODE` → 503. Checked on Ubuntu with Python 3.10.12 only.
 
 | File | Covers |
 |---|---|
 | `test_permissions.py` | role rules, 503 without demo mode, client role/actor ignored, CSRF on every form, GET never mutates, 404s |
 | `test_validation.py` | invalid dollar amounts and blank reasons rejected with no rows written; trimming; labels |
 | `test_decisions_and_audit.py` | self-approval, sequential + threaded concurrent conflicts, audit consistency, audit-failure rollback, busy-timeout 503, DB constraints |
-| `test_flags.py` | everyone views; only Fiona edits (403 for others, 401 anonymous); Fiona cannot submit or decide refunds; reason required; CSRF; GET never mutates; stale form → 409; 404; audit-failure rollback; audit target CHECK |
+| `test_flags.py` | per-tool permission labels; stale-form 409 page links to the flag; everyone views; only Fiona edits (403 for others, 401 anonymous); Fiona cannot submit or decide refunds; reason required; CSRF; GET never mutates; stale form → 409; 404; audit-failure rollback; audit target CHECK |
 | `test_money_and_migration.py` | exact dollar→cents conversion and rejects; refund-only audit table migrated with history preserved, idempotent |
 
 **Browser check** (local Chromium against the running app): submitted `12.50` (stored 1250 cents) after `12.505` was rejected; Fiona saw no decision buttons and got 403 on the submit page; Rita approved and the queue showed "Approved — payment not executed."; Rita saw Sandbox Flags read-only; Fiona disabled a flag with a reason and the audit row appeared; a second Fiona tab with the older form got 409.
@@ -206,15 +210,15 @@ Source: the Devin session's event log timestamps (server-recorded, UTC); the VM 
 | Extension requested | 17:59:16 |
 | Extension cap (40 min) | 18:39:16 |
 
-The extension was completed within the cap; the exact finish time is in the session log and PR history. These are wall-clock timestamps from one session; they are not a measured estimate of engineering effort and should not be extrapolated to other applications.
+The extension and the final polish pass (requested 18:03 EST, capped at 20 minutes) each finished within their caps; exact finish times are in the session log and PR commit history. These are wall-clock timestamps from one session; they are not a measured estimate of engineering effort and should not be extrapolated to other applications.
 
 ## Known limitations
 
 - Demo identity allows impersonation; there is no real authentication.
 - Single SQLite file, single process; no multi-instance concurrency.
-- The audit-table approach (one nullable FK per tool) does not scale to many tools; see the tradeoff above.
+- Each additional audited resource type requires an audit-table schema change; see the tradeoff above.
 - Flag routes live in `app/main.py` next to refund routes; a third tool would justify splitting routes per module.
-- No CI, no pagination, no notifications, no editing/withdrawing requests, no flag creation/deletion UI.
+- CI runs tests only (no lint, coverage or deployment). No pagination, no notifications, no editing/withdrawing requests, no flag creation/deletion UI.
 - Sandbox Flags has no SDK, targeting or rollout percentages, and nothing reads the flags.
 
 ## Production responsibilities still owned by the company
