@@ -2,7 +2,7 @@
 {% block title %}New refund request{% endblock %}
 {% block content %}
 <a class="back" href="/requests">&larr; All refund requests</a>
-<div class="page-head"><div><h1>New refund request</h1><p class="lead">A reviewer other than you will approve or reject it. No payment is executed.</p></div></div>
+<div class="page-head"><div><h1>New refund request</h1><p class="lead">A reviewer other than you will approve or reject it.</p></div></div>
 <section class="panel">
 {% if errors %}<p class="notice notice-error" role="alert">Please correct the errors below.</p>{% endif %}
 <form method="post" action="/requests">

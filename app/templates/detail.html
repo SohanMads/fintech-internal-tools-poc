@@ -5,7 +5,7 @@
 <div class="page-head"><div><h1>Refund request #{{ r.id }}</h1><p class="lead">{{ r.reason }}</p></div></div>
 <section class="panel" aria-label="Request details">
   <dl class="facts">
-    <div><dt>Amount</dt><dd class="big">{{ r.amount_cents|usd }}</dd><dd class="muted">{{ r.amount_cents }} cents</dd></div>
+    <div><dt>Amount</dt><dd class="big">{{ r.amount_cents|usd }}</dd></div>
     <div><dt>Status</dt><dd>{% include "_refund_badge.html" %}</dd></div>
     <div><dt>Requester</dt><dd>{{ r.submitter_name }}</dd><dd class="muted"><time datetime="{{ r.created_at }}">{{ r.created_at|ts }}</time></dd></div>
     {% if r.status != "pending" %}
@@ -27,9 +27,8 @@
       {% if errors.reason %}<div class="field-error" id="reason-err">{{ errors.reason }}</div>{% endif %}
       {% if errors.decision %}<div class="field-error">{{ errors.decision }}</div>{% endif %}
     </div>
-    <p class="hint">Approving records the decision only; no payment is executed.</p>
     <div class="actions">
-      <button class="btn btn-primary" type="submit" name="decision" value="approve">✓ Approve (no payment)</button>
+      <button class="btn btn-primary" type="submit" name="decision" value="approve">Approve</button>
       <button class="btn btn-danger" type="submit" name="decision" value="reject">✕ Reject request</button>
     </div>
   </form>

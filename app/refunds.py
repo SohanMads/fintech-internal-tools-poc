@@ -153,7 +153,7 @@ def seed_demo_requests(conn: sqlite3.Connection) -> None:
     if conn.execute("SELECT COUNT(*) FROM refund_requests").fetchone()[0]:
         return
     users = {u["username"]: u for u in list_users(conn)}
-    create_request(conn, users["olivia"], "49.99", "Synthetic: duplicate charge on demo order DEMO-1001")
-    create_request(conn, users["olivia"], "1250.00", "Synthetic: service outage credit for demo account DEMO-2002")
-    rid = create_request(conn, users["rita"], "15.00", "Synthetic: shipping fee refund for demo order DEMO-3003")
-    decide(conn, users["raj"], rid, "approve", "Synthetic: verified against demo shipping log")
+    create_request(conn, users["olivia"], "49.99", "Duplicate charge on demo order DEMO-1001")
+    create_request(conn, users["olivia"], "1250.00", "Service outage credit for demo account DEMO-2002")
+    rid = create_request(conn, users["rita"], "15.00", "Shipping fee refund for demo order DEMO-3003")
+    decide(conn, users["raj"], rid, "approve", "Verified against demo shipping log")
