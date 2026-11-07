@@ -34,7 +34,8 @@ The whole project was built in one Devin session. Requirements came in as chat m
 - The README's conflict demo used a request that was already decided. The user caught it.
 - The README read like a completion report. The user asked for a rewrite.
 - The approved status badge on the refund detail page overlaps the requester column at desktop widths. This was found while taking screenshots and is not fixed.
-- The session had no GitHub API access. It could not set the repo description or see `main` CI runs, and it merged PRs by pushing merge commits to `main`.
+- The session had no GitHub API access. It could not set the repo description, and it merged PRs by pushing merge commits to `main`.
+- The session first reported the `main` CI runs as unverified. A later check found they had passed.
 
 ## Draft Playbook: Add internal tool #N on the shared foundation
 

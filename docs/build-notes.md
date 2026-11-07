@@ -47,6 +47,8 @@ CI: `.github/workflows/tests.yml` runs `python -m pytest -q` on Python 3.10 for 
 
 The `pytest` GitHub Actions check passed on the PR #1 commits `cc9bde0`, `ba21537` and `9c778e7`. The last of these is the head that was merged.
 
+The `pytest` run on `main` passed after each merge: `8e947df` (PR #1) and `b6fcf22` (PR #2).
+
 ## Technical detail
 
 ### File layout
