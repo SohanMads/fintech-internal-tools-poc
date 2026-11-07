@@ -49,7 +49,7 @@ CI: `.github/workflows/tests.yml` runs `python -m pytest -q` on Python 3.10 for 
 
 ### Reproducibility
 
-**Reproducibility check:** a fresh `git clone` of this branch into an empty directory, `python3 -m venv .venv`, `pip install -r requirements-dev.txt`, `python -m pytest -q` (84 passed), then `uvicorn` with `DEMO_MODE=true`, a generated `SESSION_SECRET` and a new `DATABASE_PATH`: `/login` 200, `/static/app.css` 200, anonymous `/requests` 303 to login, and without `DEMO_MODE` → 503. Checked on Ubuntu with Python 3.10.12 only.
+**Reproducibility check:** a fresh `git clone` of the PR #1 branch into an empty directory, `python3 -m venv .venv`, `pip install -r requirements-dev.txt`, `python -m pytest -q` (84 passed), then `uvicorn` with `DEMO_MODE=true`, a generated `SESSION_SECRET` and a new `DATABASE_PATH`: `/login` 200, `/static/app.css` 200, anonymous `/requests` 303 to login, and without `DEMO_MODE` → 503. Checked on Ubuntu with Python 3.10.12 only.
 
 ### Browser check
 
@@ -137,7 +137,7 @@ The application only ever inserts into `audit_events`; it has no code path that 
 - No pagination, notifications, editing or withdrawal of requests, or UI for creating and deleting flags.
 - Sandbox Flags has no SDK, targeting or rollout percentages, and nothing reads the flags.
 
-### Production responsibilities still owned by the company
+## Production responsibilities still owned by the company
 
 - Real authentication (SSO), authorization model and access reviews.
 - Hosting, network exposure, TLS, secret management (`SESSION_SECRET`), backups and disaster recovery.
@@ -146,7 +146,7 @@ The application only ever inserts into `audit_events`; it has no code path that 
 - Security review, compliance sign-off, monitoring, incident response and on-call.
 - Code review and ownership of everything Devin produces; CI and release process.
 
-### Simulated vs. out of scope
+## Simulated vs. out of scope
 
 - **Simulated:** login (identity picker, impersonation allowed), users, requests and flags (synthetic), approval (status change only, no money moves), flags (stored values only, nothing reads them).
 - **Out of scope:** production SSO/authentication, real payment/processor/ledger integrations, public deployment, multi-instance concurrency (single SQLite file), microservices, a generic workflow builder, feature-flag SDKs/targeting/rollouts, notifications, editing/withdrawing requests, pagination.
