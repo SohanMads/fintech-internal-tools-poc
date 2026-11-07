@@ -19,7 +19,7 @@ def test_fail_closed_without_demo_mode(tmp_path):
 
 
 def test_login_page_labels_demo_identity(as_user):
-    assert "Demo identity — not production authentication." in as_user().get("/login").text
+    assert "Demo identity. Not production authentication." in as_user().get("/login").text
 
 
 def test_unauthenticated_cannot_view_or_mutate(as_user, conn):

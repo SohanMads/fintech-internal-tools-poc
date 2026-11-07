@@ -10,7 +10,7 @@
     <legend class="muted" style="margin-bottom:.5rem">Seeded users</legend>
   {% for u in users %}
     <label><input type="radio" name="user_id" value="{{ u.id }}" {% if user and user.id == u.id %}checked{% endif %} required>
-      <span><strong>{{ u.display_name }}</strong> <span class="muted">— Refunds: {{ u.role }} · Flags: {{ 'admin' if u.grants and 'flags.edit' in u.grants else 'view only' }}</span></span></label>
+      <span><strong>{{ u.display_name }}</strong> <span class="muted">· Refunds: {{ u.role }} · Flags: {{ 'admin' if u.grants and 'flags.edit' in u.grants else 'view only' }}</span></span></label>
   {% endfor %}
   </fieldset>
   <div class="actions"><button class="btn btn-primary" type="submit">Use this identity</button></div>

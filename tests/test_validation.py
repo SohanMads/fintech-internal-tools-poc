@@ -41,8 +41,8 @@ def test_approved_label_shown(as_user):
     rid = created_id(as_user("olivia").submit())
     raj = as_user("raj")
     assert raj.decide(rid, "approve").status_code == 303
-    assert "Approved — payment not executed." in raj.get(f"/requests/{rid}").text
-    assert "Approved — payment not executed." in raj.get("/requests?status=approved").text
+    assert "Approved (payment not executed)" in raj.get(f"/requests/{rid}").text
+    assert "Approved (payment not executed)" in raj.get("/requests?status=approved").text
 
 
 def test_status_filter(as_user):

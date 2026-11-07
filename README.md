@@ -68,7 +68,7 @@ Choose any seeded user on the sign-in page:
 **Submit and review a refund**
 
 1. As Olivia, open **Refunds** → **New refund request** and enter an amount such as `12.50` and a reason.
-2. Switch to Rita, open the request, and approve or reject it with a reason. Approved requests read "Approved — payment not executed."
+2. Switch to Rita, open the request, and approve or reject it with a reason. Approved requests read "Approved (payment not executed)".
 
 **Competing reviewers**
 

@@ -12,8 +12,8 @@ from . import flags, identity, refunds
 from .errors import NotFound, ServiceError, ValidationFailed
 from .db import DEFAULT_BUSY_TIMEOUT_MS, DatabaseBusy, connect, init_db
 
-DEMO_BANNER = "Demo identity — not production authentication."
-APPROVED_LABEL = "Approved — payment not executed."
+DEMO_BANNER = "Demo identity. Not production authentication."
+APPROVED_LABEL = "Approved (payment not executed)"
 ERROR_TITLES = {
     401: "Choose a demo identity first",
     403: "You don't have permission to do that",
@@ -25,7 +25,7 @@ ERROR_TITLES = {
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.filters["usd"] = lambda cents: f"${cents // 100:,}.{cents % 100:02d}"
-templates.env.filters["ts"] = lambda iso: (iso or "").replace("T", " ").replace("+00:00", "")[:16] + " UTC" if iso else "—"
+templates.env.filters["ts"] = lambda iso: (iso or "").replace("T", " ").replace("+00:00", "")[:16] + " UTC" if iso else "n/a"
 
 
 def _env_flag(name: str) -> bool:

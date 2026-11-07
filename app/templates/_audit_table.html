@@ -6,7 +6,7 @@
       <td><time datetime="{{ a.created_at }}">{{ a.created_at|ts }}</time></td>
       <td class="nowrap">{{ a.actor_name }}</td>
       <td><code>{{ a.action }}</code></td>
-      <td class="nowrap">{{ a.from_status or "—" }} &rarr; {{ a.to_status }}</td>
+      <td class="nowrap">{{ a.from_status or "(new)" }} &rarr; {{ a.to_status }}</td>
       <td>{{ a.reason }}</td>
     </tr>
   {% else %}
