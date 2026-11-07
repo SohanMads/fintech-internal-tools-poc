@@ -13,7 +13,7 @@ from .errors import NotFound, ServiceError, ValidationFailed
 from .db import DEFAULT_BUSY_TIMEOUT_MS, DatabaseBusy, connect, init_db
 
 DEMO_BANNER = "Demo identity. Not production authentication."
-APPROVED_LABEL = "Approved (payment not executed)"
+APPROVED_LABEL = "Approved"
 ERROR_TITLES = {
     401: "Choose a demo identity first",
     403: "You don't have permission to do that",

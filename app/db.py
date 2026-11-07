@@ -93,9 +93,9 @@ DEMO_USERS = [
 DEMO_GRANTS = [("fiona", "flags.edit")]
 
 DEMO_FLAGS = [
-    ("new-queue-layout", "New queue layout", "Synthetic: show the redesigned request queue.", 0),
-    ("csv-export", "CSV export", "Synthetic: allow exporting the queue as CSV.", 1),
-    ("reviewer-reminders", "Reviewer reminders", "Synthetic: remind reviewers about stale pending requests.", 0),
+    ("new-queue-layout", "New queue layout", "Show the redesigned request queue.", 0),
+    ("csv-export", "CSV export", "Allow exporting the queue as CSV.", 1),
+    ("reviewer-reminders", "Reviewer reminders", "Remind reviewers about stale pending requests.", 0),
 ]
 
 
