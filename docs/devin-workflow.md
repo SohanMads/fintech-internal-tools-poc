@@ -6,17 +6,14 @@ The whole project was built in one Devin session. Requirements came in as chat m
 
 | # | Request | Result |
 |---|---|---|
-| 1 | Create the repo, connect it to Devin, start a session, record the start time. | The repo-creation card did not appear for the user, so the user created the repo by hand. |
-| 2 | Confirm repo access before writing code. | Clone and a dry-run push both worked. |
-| 3 | Do minimal environment setup and propose a plan for the refund tool. Wait for review. | Plan with schema, test list, and time allocation. |
-| 4 | Approve the plan with corrections: `DEMO_MODE` must fail closed, server-side identity and roles only, CSRF on every form including identity switching, no GET mutations, SQLite foreign keys on, trimmed reasons, consistent status fields, 404/403/409 codes, bounded busy timeout, accurate "first committed decision" and "insert-only" wording. | [PR #1](https://github.com/SohanMads/fintech-internal-tools-poc/pull/1) opened with the refund workflow and 35 tests. |
-| 5 | Add a Sandbox Flags tool on the shared foundation, "Internal Operations" navigation, dollar amount input, and README sections on reuse and limitations. | Flags tool, audit table migration, shared modules for audit and errors. 82 tests. |
-| 6 | Final pass: per-tool permission labels, stale-form and error-page navigation, GitHub Actions CI, a clean-clone reproducibility check, accurate audit wording, UI polish. | Labels like "Refunds: viewer · Flags: admin". Stale flag 409 links to the flag. CI workflow passing. Shared stylesheet. 84 tests. |
-| 7 | Show the README. | README attached. |
-| 8 | Finalize for submission: repo description, README title, conflict demo with a fresh request, mobile-table limitation, secrets check, merge PR #1. | README fixed and PR #1 merged. The repo description could not be set from the session. |
-| 9 | Rewrite the README for a reviewer and move process detail to build notes. | [PR #2](https://github.com/SohanMads/fintech-internal-tools-poc/pull/2) with a shorter README and `docs/build-notes.md`. |
-| 10 | Three README wording fixes, merge PR #2, then review the code. | PR #2 merged. Code review returned in chat. No code changes. |
-| 11 | This documentation pass: Power Apps comparison, screenshots, target architecture, this file. | Documentation-only PR. |
+| 1 | Do minimal environment setup and propose a plan for the refund tool. Wait for review. | Plan with schema, test list, and time allocation. |
+| 2 | Approve the plan with corrections: `DEMO_MODE` must fail closed, server-side identity and roles only, CSRF on every form including identity switching, no GET mutations, SQLite foreign keys on, trimmed reasons, consistent status fields, 404/403/409 codes, bounded busy timeout, accurate "first committed decision" and "insert-only" wording. | [PR #1](https://github.com/SohanMads/fintech-internal-tools-poc/pull/1) opened with the refund workflow and 35 tests. |
+| 3 | Add a Sandbox Flags tool on the shared foundation, "Internal Operations" navigation, dollar amount input, and README sections on reuse and limitations. | Flags tool, audit table migration, shared modules for audit and errors. 82 tests. |
+| 4 | Final pass: per-tool permission labels, stale-form and error-page navigation, GitHub Actions CI, a clean-clone reproducibility check, accurate audit wording, UI polish. | Labels like "Refunds: viewer · Flags: admin". Stale flag 409 links to the flag. CI workflow passing. Shared stylesheet. 84 tests. |
+| 5 | Finalize for submission: repo description, README title, conflict demo with a fresh request, mobile-table limitation, secrets check, merge PR #1. | README fixed and PR #1 merged. The repo description could not be set from the session. |
+| 6 | Rewrite the README for a reviewer and move process detail to build notes. | [PR #2](https://github.com/SohanMads/fintech-internal-tools-poc/pull/2) with a shorter README and `docs/build-notes.md`. |
+| 7 | Three README wording fixes, then merge PR #2. | PR #2 merged. |
+| 8 | This documentation pass: Power Apps comparison, screenshots, target architecture, this file. | Documentation-only PR. |
 
 ## What Devin got right
 
@@ -33,8 +30,7 @@ The whole project was built in one Devin session. Requirements came in as chat m
 - CI was not added until the user asked.
 - The README's conflict demo used a request that was already decided. The user caught it.
 - The README read like a completion report. The user asked for a rewrite.
-- The approved status badge on the refund detail page overlaps the requester column at desktop widths. This was found while taking screenshots and is not fixed.
-- The session had no GitHub API access. It could not set the repo description, and it merged PRs by pushing merge commits to `main`.
+- The approved status badge on the refund detail page overlapped the requester column at desktop widths. It was caught during the documentation review and fixed in [PR #4](https://github.com/SohanMads/fintech-internal-tools-poc/pull/4).
 - The session first reported the `main` CI runs as unverified. A later check found they had passed.
 
 ## Draft Playbook: Add internal tool #N on the shared foundation

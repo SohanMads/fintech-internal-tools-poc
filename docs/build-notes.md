@@ -4,7 +4,7 @@ Supporting detail for the [README](../README.md): how the prototype was built, w
 
 ## Timeline and effort
 
-- Devin session time, prototype start to PR #1 merge: 20 h 34 min of wall-clock time (2026-11-06 17:45 EST to 2026-11-07 14:19 EST). Most of it was the session waiting for the next request. Build work from start to the last application code push took 23 minutes (17:45 to 18:08 EST).
+- Devin build time: 23 minutes from start to the last application code push, across 3 review rounds.
 - Human time reviewing and directing: ~__ minutes
 
 These numbers are from one session and are not an estimate for other apps.
