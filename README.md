@@ -11,6 +11,8 @@ Refunds were the main workflow. I added flags to see what could be reused when b
 You need Python 3.10 or newer.
 
 ```bash
+git clone https://github.com/SohanMads/fintech-internal-tools-poc.git
+cd fintech-internal-tools-poc
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements-dev.txt
@@ -78,7 +80,7 @@ flowchart TB
   DB --> SQLite[("SQLite file")]
 ```
 
-**Server-side permissions.** The session stores only a user id; roles and tool permissions are loaded from the database on each request. A viewer who adds `role=reviewer` to the submit form still gets 403, and an `actor_id` field sent by the browser is ignored when writing the audit record. All changes are POST forms with a per-session CSRF token.
+**Server-side permissions.** The session identifies the user by ID; roles and tool permissions are loaded from the database. A viewer who adds `role=reviewer` to the submit form still gets 403, and an `actor_id` field sent by the browser is ignored when writing the audit record. All changes are POST forms with a per-session CSRF token.
 
 **Conditional updates.** A refund decision only applies if the request is still pending and the reviewer did not submit it:
 
@@ -95,7 +97,7 @@ Dollar amounts are parsed with integer arithmetic, so `12.50` becomes `1250` cen
 
 **What flags reused.** Flags use the same sign-in, session, CSRF checks, database helpers, error handling, layout, and test fixtures as refunds. Audit and error code had to move out of the refund module into shared modules. New work was the `feature_flags` and `tool_permissions` tables, `app/flags.py`, three routes, two templates, and tests.
 
-**Audit schema tradeoff.** Each audit row points to a refund request or a flag through its own nullable foreign key, with a CHECK requiring exactly one. This keeps real relational references for both tools, but each new audited resource type needs a schema change; in SQLite that means a table rebuild. A generic `target_type`/`target_id` pair would avoid migrations but lose foreign-key enforcement.
+**Audit schema tradeoff.** Each audit row points to a refund request or a flag through its own nullable foreign key, with a CHECK requiring exactly one. This keeps real relational references for both tools, but each new audited resource type needs a schema change; in SQLite that means a table rebuild. A generic `target_type`/`target_id` pair would avoid changing the audit table for each new resource type, but would lose direct foreign-key enforcement to the target records.
 
 ## Tests
 
