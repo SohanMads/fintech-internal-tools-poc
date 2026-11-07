@@ -58,7 +58,7 @@ Paste this into Devin as a Playbook.
 4. Concurrency: use a conditional UPDATE on status or a version column. Return 409 when no row changes.
 5. Routes: add GET pages and POST actions in app/main.py. Every POST uses checked_form. No GET request changes data.
 6. Templates: extend base.html. Reuse error.html and _audit_table.html. Add a nav link.
-7. Permission grants: add the new permissions to tool_permissions and seed demo users that hold them.
+7. Permission grants: the tool_permissions CHECK constraint lists every allowed permission. Add the new permissions to it in the step 2 migration, then seed demo users that hold them.
 8. Tests in tests/test_<tool>.py:
    - Permission tests for every role, including forbidden actions (403).
    - CSRF required on every POST, and GET never changes data.
