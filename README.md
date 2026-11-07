@@ -1,4 +1,4 @@
-# Internal Operations — Cognition Take-Home
+Cognition Take-Home
 
 This project explores how a fintech engineering team could use Devin to build internal tools currently served by Power Apps. It includes a refund approval workflow and a sandbox feature-flag panel, built in one application with shared sessions, permission checks, and audit utilities.
 
