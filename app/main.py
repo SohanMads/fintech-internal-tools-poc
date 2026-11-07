@@ -12,7 +12,6 @@ from . import flags, identity, refunds
 from .errors import NotFound, ServiceError, ValidationFailed
 from .db import DEFAULT_BUSY_TIMEOUT_MS, DatabaseBusy, connect, init_db
 
-DEMO_BANNER = "Demo identity. Not production authentication."
 APPROVED_LABEL = "Approved"
 ERROR_TITLES = {
     401: "Choose a demo identity first",
@@ -119,7 +118,6 @@ def create_app(
             "permission_labels": labels,
             "user": user,
             "csrf_token": csrf_token(request),
-            "demo_banner": DEMO_BANNER,
             "approved_label": APPROVED_LABEL,
             "nav": "flags" if request.url.path.startswith("/flags") else "refunds",
         }
