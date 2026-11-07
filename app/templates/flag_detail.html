@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Flag {{ flag.name }}{% endblock %}
+{% block content %}
+<a class="back" href="/flags">&larr; All sandbox flags</a>
+<div class="page-head">
+  <div><h1>{{ flag.name }}</h1><p class="lead">{{ flag.description }}</p></div>
+  <span class="access {{ 'access-edit' if can_edit }}">{{ 'Your access: can edit' if can_edit else 'Your access: view only' }}</span>
+</div>
+<p class="notice notice-info"><strong>Sandbox only:</strong> this setting is not connected to a live application.</p>
+<section class="panel" aria-label="Flag details">
+  <dl class="facts">
+    <div><dt>Status</dt><dd><span class="badge status-{{ 'enabled' if flag.enabled else 'disabled' }}">{{ 'Enabled' if flag.enabled else 'Disabled' }}</span></dd></div>
+    <div><dt>Key</dt><dd><code>{{ flag.key }}</code></dd></div>
+    <div><dt>Last change</dt><dd>{% if flag.updated_at %}<time datetime="{{ flag.updated_at }}">{{ flag.updated_at|ts }}</time></dd><dd class="muted">by {{ flag.updated_by_name }}{% else %}Seeded, never changed{% endif %}</dd></div>
+    <div><dt>Version</dt><dd>{{ flag.version }}</dd></div>
+  </dl>
+</section>
+<section class="panel" aria-labelledby="change-h">
+  <h2 id="change-h">{% if can_edit %}{{ 'Disable' if flag.enabled else 'Enable' }} this flag{% else %}Change this flag{% endif %}</h2>
+  {% if can_edit %}
+  {% if errors %}<p class="notice notice-error" role="alert">Please correct the errors below.</p>{% endif %}
+  <form method="post" action="/flags/{{ flag.id }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="version" value="{{ flag.version }}">
+    <input type="hidden" name="desired" value="{{ 'disable' if flag.enabled else 'enable' }}">
+    <div class="field">
+      <label for="reason">Reason for change (required)</label>
+      <textarea id="reason" name="reason" rows="3" required {% if errors.reason %}aria-invalid="true" aria-describedby="reason-err"{% endif %}>{{ form.get('reason', '') }}</textarea>
+      {% if errors.reason %}<div class="field-error" id="reason-err">{{ errors.reason }}</div>{% endif %}
+      {% for key in ('desired', 'version') %}{% if errors[key] %}<div class="field-error">{{ errors[key] }}</div>{% endif %}{% endfor %}
+    </div>
+    <div class="actions"><button class="btn btn-primary" type="submit">{{ 'Disable' if flag.enabled else 'Enable' }} flag</button></div>
+  </form>
+  {% else %}
+  <p class="muted">Read-only: only the flag administrator can change sandbox flags.</p>
+  {% endif %}
+</section>
+<section class="panel flush" aria-labelledby="audit-h">
+  <h2 id="audit-h" style="padding:1rem 1rem 0">Audit history</h2>
+  <div class="table-wrap">{% include "_audit_table.html" %}</div>
+</section>
+{% endblock %}

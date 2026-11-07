@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Internal Operations{% endblock %} · Internal Operations</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="demo-banner" role="note"><div class="container"><strong>{{ demo_banner }}</strong> Synthetic-data demo with simulated sign-in; no payments are executed.</div></div>
+  <header class="topbar">
+    <div class="container">
+      <a class="brand" href="/requests">Internal Operations</a>
+      <nav class="tools" aria-label="Tools">
+        <a href="/requests" {% if nav == 'refunds' %}aria-current="page"{% endif %}>Refunds</a>
+        <a href="/flags" {% if nav == 'flags' %}aria-current="page"{% endif %}>Sandbox Flags</a>
+      </nav>
+      <div class="identity">
+      {% if user %}
+        <span>Signed in as <strong>{{ user.display_name }}</strong></span>
+        <span class="perm" aria-label="Your permissions">{% for tool, level in permission_labels %}{{ tool }}: {{ level }}{% if not loop.last %} · {% endif %}{% endfor %}</span>
+        <a href="/login">Switch identity</a>
+        <form method="post" action="/logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-small" type="submit">Sign out</button>
+        </form>
+      {% else %}
+        <a href="/login">Choose demo identity</a>
+      {% endif %}
+      </div>
+    </div>
+  </header>
+  <main class="container">{% block content %}{% endblock %}</main>
+</body>
+</html>

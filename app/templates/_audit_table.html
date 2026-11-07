@@ -1,0 +1,16 @@
+<table>
+  <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Status change</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for a in audit %}
+    <tr>
+      <td><time datetime="{{ a.created_at }}">{{ a.created_at|ts }}</time></td>
+      <td class="nowrap">{{ a.actor_name }}</td>
+      <td><code>{{ a.action }}</code></td>
+      <td class="nowrap">{{ a.from_status or "—" }} &rarr; {{ a.to_status }}</td>
+      <td>{{ a.reason }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="empty">No changes recorded yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>

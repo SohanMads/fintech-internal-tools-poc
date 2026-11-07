@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Refund requests{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Refund requests</h1>
+    <p class="lead">Submitted refunds wait for a decision from a reviewer other than the submitter.</p>
+  </div>
+  {% if can_submit %}<a class="btn btn-primary" href="/requests/new">+ New refund request</a>{% endif %}
+</div>
+<p class="notice notice-info">Approving a request only records the decision. <strong>No payment is executed.</strong></p>
+<ul class="pills" aria-label="Filter by status">
+  {% for s in ("all",) + statuses %}
+  <li><a href="/requests?status={{ s }}" {% if s == status %}aria-current="page"{% endif %}>{{ s|capitalize }}</a></li>
+  {% endfor %}
+</ul>
+<div class="panel flush table-wrap">
+<table>
+  <thead><tr><th>ID</th><th class="num">Amount</th><th>Status</th><th>Requester</th><th>Submitted</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for r in requests %}
+    <tr>
+      <td><a href="/requests/{{ r.id }}">#{{ r.id }}</a></td>
+      <td class="num">{{ r.amount_cents|usd }}</td>
+      <td>{% include "_refund_badge.html" %}</td>
+      <td class="nowrap">{{ r.submitter_name }}</td>
+      <td><time datetime="{{ r.created_at }}">{{ r.created_at|ts }}</time></td>
+      <td>{{ r.reason }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="empty">
+      {% if status == "all" %}No refund requests yet.{% else %}No {{ status }} refund requests. <a href="/requests">Show all requests</a>.{% endif %}
+      {% if can_submit and status in ("all", "pending") %}<br><a href="/requests/new">Submit the first one</a>.{% endif %}
+    </td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

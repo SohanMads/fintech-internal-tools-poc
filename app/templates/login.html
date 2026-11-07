@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Choose demo identity{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Choose a demo identity</h1><p class="lead"><strong>{{ demo_banner }}</strong></p></div></div>
+<p class="notice notice-info">Anyone using this demo can impersonate any seeded user. It demonstrates authorization rules under a simulated identity; it is not secure authentication. Roles and grants are read from the server-side database, never from the browser.</p>
+<section class="panel">
+<form method="post" action="/login">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <fieldset class="choices" style="border:0;padding:0;margin:0">
+    <legend class="muted" style="margin-bottom:.5rem">Seeded users</legend>
+  {% for u in users %}
+    <label><input type="radio" name="user_id" value="{{ u.id }}" {% if user and user.id == u.id %}checked{% endif %} required>
+      <span><strong>{{ u.display_name }}</strong> <span class="muted">— Refunds: {{ u.role }} · Flags: {{ 'admin' if u.grants and 'flags.edit' in u.grants else 'view only' }}</span></span></label>
+  {% endfor %}
+  </fieldset>
+  <div class="actions"><button class="btn btn-primary" type="submit">Use this identity</button></div>
+</form>
+</section>
+{% endblock %}

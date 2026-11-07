@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Refund request #{{ r.id }}{% endblock %}
+{% block content %}
+<a class="back" href="/requests">&larr; All refund requests</a>
+<div class="page-head"><div><h1>Refund request #{{ r.id }}</h1><p class="lead">{{ r.reason }}</p></div></div>
+<section class="panel" aria-label="Request details">
+  <dl class="facts">
+    <div><dt>Amount</dt><dd class="big">{{ r.amount_cents|usd }}</dd><dd class="muted">{{ r.amount_cents }} cents</dd></div>
+    <div><dt>Status</dt><dd>{% include "_refund_badge.html" %}</dd></div>
+    <div><dt>Requester</dt><dd>{{ r.submitter_name }}</dd><dd class="muted"><time datetime="{{ r.created_at }}">{{ r.created_at|ts }}</time></dd></div>
+    {% if r.status != "pending" %}
+    <div><dt>Decided by</dt><dd>{{ r.decider_name }}</dd><dd class="muted"><time datetime="{{ r.decided_at }}">{{ r.decided_at|ts }}</time></dd></div>
+    <div><dt>Decision reason</dt><dd>{{ r.decision_reason }}</dd></div>
+    {% endif %}
+  </dl>
+</section>
+
+<section class="panel" aria-labelledby="decision-h">
+  <h2 id="decision-h">Decision</h2>
+  {% if can_decide %}
+  {% if errors %}<p class="notice notice-error" role="alert">Please correct the errors below.</p>{% endif %}
+  <form method="post" action="/requests/{{ r.id }}/decision">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="field">
+      <label for="reason">Decision reason (required)</label>
+      <textarea id="reason" name="reason" rows="3" required {% if errors.reason %}aria-invalid="true" aria-describedby="reason-err"{% endif %}>{{ form.get('reason', '') }}</textarea>
+      {% if errors.reason %}<div class="field-error" id="reason-err">{{ errors.reason }}</div>{% endif %}
+      {% if errors.decision %}<div class="field-error">{{ errors.decision }}</div>{% endif %}
+    </div>
+    <p class="hint">Approving records the decision only; no payment is executed.</p>
+    <div class="actions">
+      <button class="btn btn-primary" type="submit" name="decision" value="approve">✓ Approve (no payment)</button>
+      <button class="btn btn-danger" type="submit" name="decision" value="reject">✕ Reject request</button>
+    </div>
+  </form>
+  {% elif r.status == "pending" and user %}
+  <p class="muted">{% if user.id == r.submitted_by %}You submitted this request, so another reviewer must decide it.{% else %}Read-only: only reviewers can decide pending requests.{% endif %}</p>
+  {% else %}
+  <p class="muted">This request has been decided. Decisions cannot be changed.</p>
+  {% endif %}
+</section>
+
+<section class="panel flush" aria-labelledby="audit-h">
+  <h2 id="audit-h" style="padding:1rem 1rem 0">Audit history</h2>
+  <div class="table-wrap">{% include "_audit_table.html" %}</div>
+</section>
+{% endblock %}
