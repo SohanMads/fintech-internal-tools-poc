@@ -73,6 +73,7 @@ time, .nowrap { white-space: nowrap; }
 .facts dt { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
 .facts dd { margin: .15rem 0 0; font-weight: 500; }
 .facts .big { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.facts .badge { white-space: normal; border-radius: 6px; }
 
 .field { margin-bottom: 1rem; max-width: 520px; }
 .field label { display: block; font-weight: 600; margin-bottom: .3rem; }
