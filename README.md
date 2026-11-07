@@ -1,4 +1,4 @@
-# fintech-internal-tools-poc
+# Internal Operations — Cognition Take-Home
 
 **Goal of this repository.** We are evaluating whether engineers can use Devin to build and maintain internal applications that would otherwise be built with Power Apps. The refund application is a representative first workflow. We are **not** building a refund business, a payment processor, or a complete low-code platform.
 
@@ -44,7 +44,7 @@ Delete `refunds.db*` to reset the demo data. An existing `refunds.db` from the r
 
 1. Open http://127.0.0.1:8000 and choose **Olivia Operator**. **Refunds → + Submit a refund request**, amount `12.50`, any reason. (`12.505` or `abc` is rejected.)
 2. Switch identity to **Rita Reviewer**, open the new request, enter a reason and **Approve** → "Approved — payment not executed."
-3. Open the same pending request as Rita and Raj in two browsers and decide in both: the second gets **409**.
+3. Conflict check with a **fresh pending request**: as Olivia, submit another request (e.g. `20.00`). Open that request as Rita in one browser and as Raj in a second browser profile or private window, enter a reason in both, then submit both: the first decision to commit wins and the other gets **409**. (The request from step 2 is already decided, so it cannot show this.)
 4. Choose **Fiona Flag Admin** → **Sandbox Flags** → a flag → enter a reason → **Enable/Disable**. The audit history shows the change.
 5. Open the same flag in two Fiona tabs and submit both: the older form gets **409** instead of overwriting.
 6. As any other user, **Sandbox Flags** is read-only. As Fiona, refund decision buttons are absent and **/requests/new** returns 403.
@@ -215,6 +215,7 @@ The extension and the final polish pass (requested 18:04:28 EST, capped at 20 mi
 ## Known limitations
 
 - Demo identity allows impersonation; there is no real authentication.
+- Narrow screens: the page does not overflow at 390px, but wide tables (refund queue, audit history) scroll horizontally inside their panel and rows become tall; there is no stacked card layout for phones.
 - Single SQLite file, single process; no multi-instance concurrency.
 - Each additional audited resource type requires an audit-table schema change; see the tradeoff above.
 - Flag routes live in `app/main.py` next to refund routes; a third tool would justify splitting routes per module.
