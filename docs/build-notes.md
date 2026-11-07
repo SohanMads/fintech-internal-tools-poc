@@ -1,11 +1,5 @@
 # Build notes
 
-## Timeline and effort
-
-- Devin build time: 23 minutes from start to the last application code push, across 3 review rounds.
-- Human time reviewing and directing: ~__ minutes
-
-These numbers are from one session and are not an estimate for other apps.
 
 ## Tests
 
