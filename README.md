@@ -1,237 +1,131 @@
 # Internal Operations — Cognition Take-Home
 
-**Goal of this repository.** We are evaluating whether engineers can use Devin to build and maintain internal applications that would otherwise be built with Power Apps. The refund application is a representative first workflow. We are **not** building a refund business, a payment processor, or a complete low-code platform.
+This project explores how a fintech engineering team could use Devin to build internal tools currently served by Power Apps. It includes a refund approval workflow and a sandbox feature-flag panel, built in one application with shared sessions, permission checks, and audit utilities.
 
-Two small tools share one local FastAPI app ("Internal Operations"):
+Refunds were the main workflow. I added flags to see what could be reused when building another tool.
 
-- **Refunds** (primary end-to-end workflow): an operations employee submits a refund request, a **different** authorized reviewer approves or rejects it, and every creation and decision is stored with an audit history.
-- **Sandbox Flags** (reuse test): a flag administrator enables/disables synthetic feature flags with a required reason; everyone else can only view them. **These settings are not connected to a live application.**
-
-> **Local prototype only.** Synthetic data. **No payments are executed**: "Approved — payment not executed." is a status change in SQLite and nothing else.
-
-Two demo tools do not show that Power Apps can be fully replaced, and they do not establish the cost of building or maintaining ten future applications.
+> Local demo with synthetic data and simulated sign-in. Refund approvals do not move money, and flags do not control a live application.
 
 ## Run locally
 
-Requires Python 3.10+.
+You need Python 3.10 or newer.
 
 ```bash
+git clone https://github.com/SohanMads/fintech-internal-tools-poc.git
+cd fintech-internal-tools-poc
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements-dev.txt
 
-export DEMO_MODE=true                                                  # required; without it every page returns 503
-export SESSION_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"  # optional; keeps sessions across restarts
+export DEMO_MODE=true
+export SESSION_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
-# open http://127.0.0.1:8000
 ```
 
-Run tests:
+Then open http://127.0.0.1:8000.
+
+`DEMO_MODE=true` enables the demo sign-in page; without it every page returns 503. `SESSION_SECRET` signs the session cookie. Reuse the same value across restarts to keep users signed in; if unset, a random secret is generated and sessions reset on every restart.
+
+On first start the app creates and seeds `refunds.db` in the current directory (override with `DATABASE_PATH`). To reset the demo data, stop the server and delete only that file and its SQLite side files:
 
 ```bash
-python -m pytest -q
+rm -f refunds.db refunds.db-wal refunds.db-shm
 ```
 
-| Env var | Default | Purpose |
+## Try the workflows
+
+Choose any seeded user on the sign-in page:
+
+| User | Refunds | Sandbox Flags |
 |---|---|---|
-| `DEMO_MODE` | unset | Must be `true` to enable the demo identity picker. Otherwise every request gets **503** (fail closed — there is no real authentication). |
-| `DATABASE_PATH` | `refunds.db` | SQLite file (created and seeded on startup). |
-| `SESSION_SECRET` | random per process | Signs the session cookie. If unset, sessions reset when the server restarts. |
+| Olivia Operator | Submit | View |
+| Rita Reviewer | Submit; approve or reject others' requests | View |
+| Raj Reviewer | Submit; approve or reject others' requests | View |
+| Victor Viewer | View | View |
+| Fiona Flag Admin | View | Enable or disable |
 
-Delete `refunds.db*` to reset the demo data. An existing `refunds.db` from the refund-only version is migrated in place on startup (see [Audit schema change](#audit-schema-change-and-tradeoff)).
+**Submit and review a refund**
 
-### Demo script
+1. As Olivia, open **Refunds** → **New refund request** and enter an amount such as `12.50` and a reason.
+2. Switch to Rita, open the request, and approve or reject it with a reason. Approved requests read "Approved — payment not executed."
 
-1. Open http://127.0.0.1:8000 and choose **Olivia Operator**. **Refunds → + Submit a refund request**, amount `12.50`, any reason. (`12.505` or `abc` is rejected.)
-2. Switch identity to **Rita Reviewer**, open the new request, enter a reason and **Approve** → "Approved — payment not executed."
-3. Conflict check with a **fresh pending request**: as Olivia, submit another request (e.g. `20.00`). Open that request as Rita in one browser and as Raj in a second browser profile or private window, enter a reason in both, then submit both: the first decision to commit wins and the other gets **409**. (The request from step 2 is already decided, so it cannot show this.)
-4. Choose **Fiona Flag Admin** → **Sandbox Flags** → a flag → enter a reason → **Enable/Disable**. The audit history shows the change.
-5. Open the same flag in two Fiona tabs and submit both: the older form gets **409** instead of overwriting.
-6. As any other user, **Sandbox Flags** is read-only. As Fiona, refund decision buttons are absent and **/requests/new** returns 403.
+**Competing reviewers**
 
-## Demo identities
+1. As Olivia, submit a fresh request so it is pending.
+2. Open it as Rita in one browser and as Raj in a private window.
+3. Submit a decision in both. The first one saved wins; the other gets a 409 "already decided" page.
 
-**Demo identity — not production authentication.** The login page lets anyone pick any seeded user, i.e. the demo allows impersonation by design. It exists to demonstrate the authorization rules under a simulated identity; it is not secure authentication. Keep it on localhost.
+**Change a flag**
 
-| User | Role | Submit | Approve / reject |
-|---|---|---|---|
-| Olivia Operator | operator | yes | no |
-| Rita Reviewer | reviewer | yes | yes, except own requests |
-| Raj Reviewer | reviewer | yes | yes, except own requests |
-| Victor Viewer | viewer | no (read-only) | no |
-| Fiona Flag Admin | viewer + `flags.edit` grant | no | no |
+1. As Fiona, open **Sandbox Flags**, choose a flag, and enable or disable it with a reason. The change appears in its audit history.
+2. Open the same flag in two tabs and save a change in the first. The second tab's form is now stale: submitting it returns 409 "This setting has changed" with a link to the flag's current state.
 
-Only Fiona can change Sandbox Flags; everyone signed in can view them. The session stores only the user id. The refund role, the `flags.edit` grant (`tool_permissions` table) and the audit actor are always read from the server-side database; client-supplied role/actor fields are ignored.
+## How it works
 
-## Rules enforced on the server
-
-- Refund amount is entered in dollars (`12.50`, `12.5`, `7`) and converted to integer cents with string/integer arithmetic only (no `float`, no binary floating point). Rejected: more than two decimals, `12.`, `.5`, signs, `$`, commas, exponents, zero, over $1,000,000.00. Stored as `amount_cents` INTEGER.
-- Reasons (refund submissions, decisions, flag changes) are trimmed, non-blank, ≤ 1000 chars.
-- Only reviewers decide, never on their own requests; a decision needs a reason and only changes a `pending` request.
-- Flag changes need the `flags.edit` grant, a reason, and the flag `version` the form was rendered with; a mismatched version is **409** (stale form).
-- Responses: **404** nonexistent request or flag, **403** forbidden action or bad CSRF token, **409** already decided / stale flag form, **422** validation error, **401** no identity on a POST, **503** + `Retry-After: 1` if the SQLite busy timeout (2 s) expires.
-- All state-changing actions (submit, decide, change flag, choose identity, sign out) are `POST` forms with a per-session CSRF token (Starlette `SessionMiddleware` signed cookie + synchronizer token, compared with `secrets.compare_digest`). No `GET` request mutates anything.
-
-## Architecture
-
-One FastAPI process, server-rendered Jinja2 templates, one SQLite file. No extra services.
+One FastAPI process renders Jinja2 templates and stores data in one SQLite file. There is no JavaScript framework or external service.
 
 ```mermaid
 flowchart TB
-  Browser["Browser (POST forms + CSRF token)"] --> Main
-  subgraph Shared["Shared foundation"]
-    Main["app/main.py<br/>routes, demo identity + session, CSRF, error pages, nav"]
-    Identity["app/identity.py<br/>users + tool_permissions lookup"]
-    DB["app/db.py<br/>connect (foreign_keys, busy_timeout), schema, migration, seeds, transaction()"]
-    Audit["app/audit.py<br/>record() / history()"]
-    Errors["app/errors.py + app/validation.py<br/>404/403/409/422 errors, reason rules"]
-    Layout["templates/base.html, login.html, error.html"]
+  Browser["Browser: HTML forms with CSRF token"] --> Main["app/main.py<br/>routes, demo sign-in, session, CSRF, error pages"]
+  Main --> Refunds["app/refunds.py<br/>refund rules"]
+  Main --> Flags["app/flags.py<br/>flag rules"]
+  subgraph Shared["Shared modules"]
+    Identity["app/identity.py<br/>users and tool permissions"]
+    Audit["app/audit.py<br/>audit insert and history"]
+    Common["app/errors.py, app/validation.py"]
+    DB["app/db.py<br/>connections, transactions, schema, seeds"]
   end
-  subgraph Refunds["Refunds module"]
-    R["app/refunds.py<br/>dollars→cents, submit/decide rules, no self-approval"]
-    RT["queue / new / detail templates"]
-  end
-  subgraph Flags["Sandbox Flags module"]
-    F["app/flags.py<br/>flags.edit check, enable/disable, version check"]
-    FT["flags / flag_detail templates"]
-  end
-  Main --> R & F
-  R & F --> Identity & Audit & Errors & DB
+  Refunds --> Shared
+  Flags --> Shared
   DB --> SQLite[("SQLite file")]
 ```
 
-```
-app/main.py        routes for both tools, demo identity, session + CSRF, error handling, nav context
-app/db.py          connection setup, schema, audit migration, seeds, transaction helper
-app/identity.py    server-side user and grant lookup
-app/audit.py       shared audit insert + history query
-app/errors.py      shared ServiceError hierarchy (status codes)
-app/validation.py  shared reason validation
-app/refunds.py     refund-only rules
-app/flags.py       flag-only rules
-app/templates/     base (Internal Operations nav), login, error, refund pages, flag pages
-tests/             pytest suite
-```
+**Server-side permissions.** The session identifies the user by ID; roles and tool permissions are loaded from the database. A viewer who adds `role=reviewer` to the submit form still gets 403, and an `actor_id` field sent by the browser is ignored when writing the audit record. All changes are POST forms with a per-session CSRF token.
 
-### Development flow
-
-```mermaid
-flowchart LR
-  Req["Written requirements"] --> Devin["Devin session<br/>plan → code → tests → browser check"]
-  Devin --> PR["GitHub PR"]
-  PR --> Review["Human review + local test run"]
-  Review -->|changes requested| Devin
-```
-
-CI: `.github/workflows/tests.yml` runs `python -m pytest -q` on Python 3.10 for pull requests and pushes to `main`. Tests use a temporary SQLite file per test and a fixed test session secret; no credentials or deployment.
-
-### Schema
-
-- `users(id, username UNIQUE, display_name, role CHECK IN (operator, reviewer, viewer))`
-- `tool_permissions(user_id FK, permission CHECK IN ('flags.edit'), PK(user_id, permission))`
-- `refund_requests(id, amount_cents CHECK integer > 0, reason CHECK trimmed non-blank, status CHECK IN (pending, approved, rejected), submitted_by FK, created_at, decided_by FK, decision_reason, decided_at)`
-  - CHECK: pending ⇒ no decision fields; approved/rejected ⇒ reviewer, reason and timestamp all present.
-  - CHECK: `decided_by <> submitted_by`.
-- `feature_flags(id, key UNIQUE, name, description, enabled CHECK IN (0,1), version ≥ 1, updated_at, updated_by FK)`
-- `audit_events(id, request_id FK NULL, flag_id FK NULL, actor_id FK, action, from_status, to_status, reason, created_at)`
-  - CHECK: exactly one of `request_id` / `flag_id` is set, and the action matches the tool (`created/approved/rejected` for refunds, `flag_enabled/flag_disabled` for flags).
-
-Foreign keys are enabled on every connection.
-
-### Audit schema change and tradeoff
-
-The refund-only `audit_events` had `request_id NOT NULL`. The change: make `request_id` nullable, add nullable `flag_id`, and add a CHECK that exactly one target is set. SQLite cannot relax `NOT NULL` in place, so `init_db` rebuilds the table once (create new → copy all rows with `flag_id = NULL` → drop → rename) in one transaction, verifies the row count and `PRAGMA foreign_key_check`, and rolls back if either fails. Existing ids and history are kept. This was checked on a test database and on the existing local demo database (7 refund audit rows before and after).
-
-- **Why this:** one audit table and one `audit.record()` / `audit.history()` for both tools, with real foreign keys to each target table.
-- **Cost:** this keeps real relational references for these two tools, but each additional audited resource type needs a schema change (a new nullable FK column, a wider CHECK, and a table rebuild in SQLite). It can support more tools; it just requires a migration for each one. Alternatives: a separate audit table per tool (no migration, but duplicated audit code), or a generic `target_type` + `target_id` pair (scales, but loses foreign-key enforcement). For two tools, the nullable-FK version was the smallest change that kept integrity checks.
-
-### Atomicity and conflicts
-
-Each create or decision runs in one `BEGIN IMMEDIATE` transaction that writes the request row **and** its audit event; if either fails, both roll back. Decisions use a conditional update:
+**Conditional updates.** A refund decision only applies if the request is still pending and the reviewer did not submit it:
 
 ```sql
 UPDATE refund_requests SET status = ?, decided_by = ?, decision_reason = ?, decided_at = ?
 WHERE id = ? AND status = 'pending' AND submitted_by <> ?
 ```
 
-If two reviewers decide the same request, the **first decision to commit** wins (not necessarily the first click); the other gets 409 and no audit event is written for it.
+If no row changes, the reviewer gets 409 (already decided) or 403 (own request). Flag forms carry a version number; the update uses `WHERE id = ? AND version = ?` and increments it, so an older form cannot overwrite a newer change.
 
-Flag changes use the same pattern: one transaction updates the flag with `WHERE id = ? AND version = ?` (the version from the form), increments `version`, and inserts the audit event. A form rendered before a newer change carries an old version and gets 409.
+**Atomic audit writes.** Each submission, decision, or flag change runs in one `BEGIN IMMEDIATE` transaction together with its audit insert. If the audit insert fails, the change rolls back.
 
-### Audit history
+Dollar amounts are parsed with integer arithmetic, so `12.50` becomes `1250` cents without floating point.
 
-The application only ever inserts into `audit_events`; it has no code path that updates or deletes audit rows. This is application behavior only — the table is **not** immutable or tamper-resistant against anyone with direct access to the SQLite file.
+**What flags reused.** Flags use the same sign-in, session, CSRF checks, database helpers, error handling, layout, and test fixtures as refunds. Audit and error code had to move out of the refund module into shared modules. New work was the `feature_flags` and `tool_permissions` tables, `app/flags.py`, three routes, two templates, and tests.
 
-## What Sandbox Flags reused vs. newly implemented
+**Audit schema tradeoff.** Each audit row points to a refund request or a flag through its own nullable foreign key, with a CHECK requiring exactly one. This keeps real relational references for both tools, but each new audited resource type needs a schema change; in SQLite that means a table rebuild. A generic `target_type`/`target_id` pair would avoid changing the audit table for each new resource type, but would lose direct foreign-key enforcement to the target records.
 
-**Reused unchanged or with small generalization:**
-- Demo identity picker, session cookie, `DEMO_MODE` fail-closed middleware, sign-in/out.
-- CSRF synchronizer token and `checked_form()`; `require_user()`.
-- `db.connect()` (foreign keys, busy timeout), `transaction()` (`BEGIN IMMEDIATE`), `DatabaseBusy` → 503 handler.
-- Audit insert/history (moved from refund code into `app/audit.py`, generalized with a `flag_id` target).
-- Error classes and their 403/404/409/422 handler (moved to `app/errors.py`).
-- Reason validation (moved to `app/validation.py`).
-- Layout, banners, error page, `ts` timestamp filter, badge styles.
-- Test fixtures: `app`, `conn`, `users`, `as_user`, `UserClient` (no changes needed for flags).
+## Tests
 
-**New for Sandbox Flags:**
-- `feature_flags` and `tool_permissions` tables, seeds (3 flags, Fiona + `flags.edit`), audit table migration.
-- `app/identity.py` grant lookup (`has_permission`).
-- `app/flags.py`: permission check, enable/disable, version-checked update + audit in one transaction.
-- Three routes (`GET /flags`, `GET /flags/{id}`, `POST /flags/{id}`) and two templates.
-- `tests/test_flags.py`, `tests/test_money_and_migration.py`.
+```bash
+python -m pytest -q
+```
 
-**Shared changes made in the same pass:** "Internal Operations" navigation, status badges, readable timestamps, and dollar-amount refund input.
+The 84 tests each use a temporary SQLite database. They cover:
 
-## Test results
+- permissions for both tools, including no self-approval;
+- competing decisions (sequential and concurrent) and stale flag forms;
+- CSRF on every form, and GET never modifying data;
+- audit records matching each change, and rollback when the audit insert fails;
+- dollar parsing and input validation;
+- the 503 response without `DEMO_MODE`;
+- migrating the older refund-only audit table with history preserved.
 
-`python -m pytest -q` → **84 passed** locally, in a clean clone, and in GitHub Actions (previously 35 for the refund-only version).
+GitHub Actions (`.github/workflows/tests.yml`) runs the same command on Python 3.10 for pull requests and pushes to `main`, with no secrets and no deployment.
 
-**Reproducibility check:** a fresh `git clone` of this branch into an empty directory, `python3 -m venv .venv`, `pip install -r requirements-dev.txt`, `python -m pytest -q` (84 passed), then `uvicorn` with `DEMO_MODE=true`, a generated `SESSION_SECRET` and a new `DATABASE_PATH`: `/login` 200, `/static/app.css` 200, anonymous `/requests` 303 to login, and without `DEMO_MODE` → 503. Checked on Ubuntu with Python 3.10.12 only.
+## Limitations
 
-| File | Covers |
-|---|---|
-| `test_permissions.py` | role rules, 503 without demo mode, client role/actor ignored, CSRF on every form, GET never mutates, 404s |
-| `test_validation.py` | invalid dollar amounts and blank reasons rejected with no rows written; trimming; labels |
-| `test_decisions_and_audit.py` | self-approval, sequential + threaded concurrent conflicts, audit consistency, audit-failure rollback, busy-timeout 503, DB constraints |
-| `test_flags.py` | per-tool permission labels; stale-form 409 page links to the flag; everyone views; only Fiona edits (403 for others, 401 anonymous); Fiona cannot submit or decide refunds; reason required; CSRF; GET never mutates; stale form → 409; 404; audit-failure rollback; audit target CHECK |
-| `test_money_and_migration.py` | exact dollar→cents conversion and rejects; refund-only audit table migrated with history preserved, idempotent |
+- Sign-in is simulated, and any user can be impersonated.
+- It runs as one local process on SQLite, with no deployment setup.
+- No payment, ledger, or feature-flag integrations exist.
+- The app never edits audit rows, but anyone with database file access can.
+- Each new audited resource type requires an audit schema change.
+- On narrow screens, tables scroll horizontally and rows grow tall; there is no stacked mobile layout.
 
-**Browser check** (local Chromium against the running app): submitted `12.50` (stored 1250 cents) after `12.505` was rejected; Fiona saw no decision buttons and got 403 on the submit page; Rita approved and the queue showed "Approved — payment not executed."; Rita saw Sandbox Flags read-only; Fiona disabled a flag with a reason and the audit row appeared; a second Fiona tab with the older form got 409.
+Production use would require identity-provider integration, deployment and operations work, and a security review.
 
-## Observed time
-
-Source: the Devin session's event log timestamps (server-recorded, UTC); the VM clock agrees with them.
-
-| Event | Time (EST) |
-|---|---|
-| Prototype start recorded | 17:45:01 |
-| Refund prototype reported (PR #1 opened) | 17:50:07 |
-| Extension requested | 17:59:16 |
-| Extension cap (40 min) | 18:39:16 |
-
-The extension and the final polish pass (requested 18:04:28 EST, capped at 20 minutes) each finished within their caps; exact finish times are in the session log and PR commit history. These are wall-clock timestamps from one session; they are not a measured estimate of engineering effort and should not be extrapolated to other applications.
-
-## Known limitations
-
-- Demo identity allows impersonation; there is no real authentication.
-- Narrow screens: the page does not overflow at 390px, but wide tables (refund queue, audit history) scroll horizontally inside their panel and rows become tall; there is no stacked card layout for phones.
-- Single SQLite file, single process; no multi-instance concurrency.
-- Each additional audited resource type requires an audit-table schema change; see the tradeoff above.
-- Flag routes live in `app/main.py` next to refund routes; a third tool would justify splitting routes per module.
-- CI runs tests only (no lint, coverage or deployment). No pagination, no notifications, no editing/withdrawing requests, no flag creation/deletion UI.
-- Sandbox Flags has no SDK, targeting or rollout percentages, and nothing reads the flags.
-
-## Production responsibilities still owned by the company
-
-- Real authentication (SSO), authorization model and access reviews.
-- Hosting, network exposure, TLS, secret management (`SESSION_SECRET`), backups and disaster recovery.
-- Database choice, migrations process, data retention, and tamper-evident audit storage.
-- Payment/ledger integration and financial controls, if any are ever connected.
-- Security review, compliance sign-off, monitoring, incident response and on-call.
-- Code review and ownership of everything Devin produces; CI and release process.
-
-## Simulated vs. out of scope
-
-- **Simulated:** login (identity picker, impersonation allowed), users, requests and flags (synthetic), approval (status change only, no money moves), flags (stored values only, nothing reads them).
-- **Out of scope:** production SSO/authentication, real payment/processor/ledger integrations, public deployment, multi-instance concurrency (single SQLite file), microservices, a generic workflow builder, feature-flag SDKs/targeting/rollouts, notifications, editing/withdrawing requests, pagination.
+Build timeline, verification history, and more technical detail are in [docs/build-notes.md](docs/build-notes.md).
