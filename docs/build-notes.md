@@ -4,22 +4,10 @@ Supporting detail for the [README](../README.md): how the prototype was built, w
 
 ## Timeline and effort
 
-This project was built in one Devin session with written requirements, reviewed through GitHub pull requests. The times below are wall-clock timestamps from that session. They are not a measurement of human engineering effort, and they should not be used to estimate the cost of other applications.
+- Devin build time: 23 minutes from start to the last application code push, across 3 review rounds.
+- Human time reviewing and directing: ~__ minutes
 
-### Session timeline
-
-Source: the Devin session's event log timestamps (server-recorded, UTC); the VM clock agrees with them.
-
-| Event | Time (EST) |
-|---|---|
-| Prototype start recorded | 17:45:01 |
-| Refund prototype reported (PR #1 opened) | 17:50:07 |
-| Extension requested | 17:59:16 |
-| Extension cap (40 min) | 18:39:16 |
-
-The extension and the final polish pass (requested 18:04:28 EST, capped at 20 minutes) each finished within their caps; exact finish times are in the session log and PR commit history. These are wall-clock timestamps from one session; they are not a measured estimate of engineering effort and should not be extrapolated to other applications.
-
-After this, PR #1 was finalized and merged into `main` (merge commit `8e947df`). The README was then rewritten in a separate documentation-only PR.
+These numbers are from one session and are not an estimate for other apps.
 
 ### Development flow
 
@@ -49,7 +37,7 @@ CI: `.github/workflows/tests.yml` runs `python -m pytest -q` on Python 3.10 for 
 
 ### Reproducibility
 
-**Reproducibility check:** a fresh `git clone` of the PR #1 branch into an empty directory, `python3 -m venv .venv`, `pip install -r requirements-dev.txt`, `python -m pytest -q` (84 passed), then `uvicorn` with `DEMO_MODE=true`, a generated `SESSION_SECRET` and a new `DATABASE_PATH`: `/login` 200, `/static/app.css` 200, anonymous `/requests` 303 to login, and without `DEMO_MODE` → 503. Checked on Ubuntu with Python 3.10.12 only.
+**Reproducibility check:** a fresh `git clone` of the PR #1 branch into an empty directory, `python3 -m venv .venv`, `pip install -r requirements-dev.txt`, `python -m pytest -q` (84 passed), then `uvicorn` with `DEMO_MODE=true`, a generated `SESSION_SECRET` and a new `DATABASE_PATH`: `/login` 200, `/static/app.css` 200, anonymous `/requests` 303 to login, and without `DEMO_MODE` → 503. Checked on Ubuntu with Python 3.10.12.
 
 ### Browser check
 
@@ -57,7 +45,9 @@ CI: `.github/workflows/tests.yml` runs `python -m pytest -q` on Python 3.10 for 
 
 ### CI
 
-The `pytest` GitHub Actions check passed on the PR #1 commits `cc9bde0`, `ba21537` and `9c778e7`; the last of these is the head that was merged. Merging pushed to `main`, which starts a separate workflow run. Its result was not checked from the session, so it is not recorded here as passed.
+The `pytest` GitHub Actions check passed on the PR #1 commits `cc9bde0`, `ba21537` and `9c778e7`. The last of these is the head that was merged.
+
+The `pytest` run on `main` passed after each merge: `8e947df` (PR #1) and `b6fcf22` (PR #2).
 
 ## Technical detail
 

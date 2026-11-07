@@ -6,6 +6,27 @@ Refunds were the main workflow. I added flags to see what could be reused when b
 
 > Local demo with synthetic data and simulated sign-in. Refund approvals do not move money, and flags do not control a live application.
 
+## What this replicates from Power Apps (and what it doesn't)
+
+Devin replaces the app builder, not the platform. Power Apps gives a team (a) a fast way to build forms-over-data apps and (b) a managed platform: Entra ID SSO, connectors, Dataverse, hosting, and admin governance (environments, DLP policies). Devin can replace (a). The company would own (b).
+
+| Replicated here | Not replicated (on purpose) |
+|---|---|
+| Forms over data | Connectors |
+| Server-side role and permission checks | Dataverse |
+| Approval workflow with no self-approval | Citizen-developer building |
+| Append-only audit trail (enforced by the app) | Managed hosting |
+| Safe concurrent edits | DLP and environment governance |
+| | Mobile app |
+
+Refunds were chosen over KYC because KYC brings PII, an identity-verification vendor, and compliance review into scope. That makes it the worst app to start with and the last one to migrate.
+
+There is no generic form builder. Rebuilding the Power Apps builder misses the point because Devin is the builder.
+
+**Reuse result:** the flags tool added `app/flags.py` (83 lines), 2 tables (`feature_flags`, `tool_permissions`), 3 routes, 2 templates (69 lines), and 18 tests. It reused the session and CSRF handling, `db.connect` and `db.transaction`, the audit, error, and validation modules, the base layout, error page, and audit-table templates, and the test fixtures. The audit table needed one migration to add a `flag_id` column.
+
+Target production design: [docs/architecture.md](docs/architecture.md). How the project was built: [docs/devin-workflow.md](docs/devin-workflow.md).
+
 ## Run locally
 
 You need Python 3.10 or newer.
@@ -55,6 +76,12 @@ Choose any seeded user on the sign-in page:
 2. Open it as Rita in one browser and as Raj in a private window.
 3. Submit a decision in both. The first one saved wins; the other gets a 409 "already decided" page.
 
+![Refund queue](docs/screenshots/refund-queue.png)
+
+![Decided refund with audit history](docs/screenshots/refund-detail-audit.png)
+
+![409 page for the second reviewer](docs/screenshots/refund-conflict-409.png)
+
 **Change a flag**
 
 1. As Fiona, open **Sandbox Flags**, choose a flag, and enable or disable it with a reason. The change appears in its audit history.
@@ -63,6 +90,8 @@ Choose any seeded user on the sign-in page:
 ## How it works
 
 One FastAPI process renders Jinja2 templates and stores data in one SQLite file. There is no JavaScript framework or external service.
+
+**Prototype module layout**
 
 ```mermaid
 flowchart TB
