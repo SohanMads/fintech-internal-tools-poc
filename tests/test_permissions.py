@@ -101,3 +101,16 @@ def test_unknown_request_is_404(as_user):
     raj = as_user("raj")
     assert raj.get("/requests/999").status_code == 404
     assert raj.decide(999).status_code == 404
+
+
+def test_malformed_csrf_token_rejected_without_changes(as_user, conn, users):
+    olivia, fiona = as_user("olivia"), as_user("fiona")
+    before = (count(conn, "refund_requests"), count(conn, "audit_events"))
+    flag = conn.execute("SELECT * FROM feature_flags ORDER BY id LIMIT 1").fetchone()
+    assert olivia.client.post("/requests", data={"amount": "1.00", "reason": "x", "csrf_token": "é"}).status_code == 403
+    assert fiona.client.post(f"/flags/{flag['id']}", data={
+        "desired": "disable" if flag["enabled"] else "enable", "reason": "x",
+        "version": str(flag["version"]), "csrf_token": "é"}).status_code == 403
+    assert as_user().client.post("/login", data={"user_id": str(users["rita"]["id"]), "csrf_token": "é"}).status_code == 403
+    assert (count(conn, "refund_requests"), count(conn, "audit_events")) == before
+    assert dict(conn.execute("SELECT * FROM feature_flags WHERE id=?", (flag["id"],)).fetchone()) == dict(flag)

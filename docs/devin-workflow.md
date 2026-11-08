@@ -1,75 +1,50 @@
 # How this was built with Devin
 
-The whole project was built in one Devin session. Requirements came in as chat messages. Changes went through GitHub pull requests.
+The project was built in one Devin session. Requirements arrived as chat messages, and every change went through a GitHub pull request with the `pytest` check.
 
-## Requests and results
+## Scope
 
-| # | Request | Result |
-|---|---|---|
-| 1 | Do minimal environment setup and propose a plan for the refund tool. Wait for review. | Plan with schema, test list, and time allocation. |
-| 2 | Approve the plan with corrections: `DEMO_MODE` must fail closed, server-side identity and roles only, CSRF on every form including identity switching, no GET mutations, SQLite foreign keys on, trimmed reasons, consistent status fields, 404/403/409 codes, bounded busy timeout, accurate "first committed decision" and "insert-only" wording. | [PR #1](https://github.com/SohanMads/fintech-internal-tools-poc/pull/1) opened with the refund workflow and 35 tests. |
-| 3 | Add a Sandbox Flags tool on the shared foundation, "Internal Operations" navigation, dollar amount input, and README sections on reuse and limitations. | Flags tool, audit table migration, shared modules for audit and errors. 82 tests. |
-| 4 | Final pass: per-tool permission labels, stale-form and error-page navigation, GitHub Actions CI, a clean-clone reproducibility check, accurate audit wording, UI polish. | Labels like "Refunds: viewer · Flags: admin". Stale flag 409 links to the flag. CI workflow passing. Shared stylesheet. 84 tests. |
-| 5 | Finalize for submission: repo description, README title, conflict demo with a fresh request, mobile-table limitation, secrets check, merge PR #1. | README fixed and PR #1 merged. The repo description could not be set from the session. |
-| 6 | Rewrite the README for a reviewer and move process detail to build notes. | [PR #2](https://github.com/SohanMads/fintech-internal-tools-poc/pull/2) with a shorter README and `docs/build-notes.md`. |
-| 7 | Three README wording fixes, then merge PR #2. | PR #2 merged. |
-| 8 | This documentation pass: Power Apps comparison, screenshots, target architecture, this file. | Documentation-only PR. |
+A refund approval workflow with synthetic data, simulated sign-in, server-side permissions, no self-approval, safe concurrent decisions, and an audit trail. A small Sandbox Flags tool was then added on the same foundation to see what could be reused. Payments, real authentication, deployment, and a generic form builder were out of scope.
 
-## What Devin got right
+## Pull requests
 
-- The first plan already had atomic audit writes in the same transaction and a conditional update for competing reviewers.
-- Tests cover the hard cases: concurrent decisions from two threads, audit-failure rollback, and forged role or actor fields.
-- The audit table migration kept existing history and verified row counts and foreign keys before committing.
-- Adding flags did not touch refund rules. Shared code moved into its own modules.
+| PR | Change |
+|---|---|
+| [#1](https://github.com/SohanMads/fintech-internal-tools-poc/pull/1) | Refund workflow (35 tests), then Sandbox Flags, shared audit and error modules, CI, and UI polish (84 tests) |
+| [#2](https://github.com/SohanMads/fintech-internal-tools-poc/pull/2) | README rewrite |
+| [#3](https://github.com/SohanMads/fintech-internal-tools-poc/pull/3) | Power Apps comparison, screenshots, architecture notes, this file |
+| [#4](https://github.com/SohanMads/fintech-internal-tools-poc/pull/4) | CSS fix for the status badge overlapping the requester column |
+| [#5](https://github.com/SohanMads/fintech-internal-tools-poc/pull/5) | Shorter UI copy and seed data, shorter docs |
+| [#6](https://github.com/SohanMads/fintech-internal-tools-poc/pull/6) | Reject button label, unused constant removed |
+| [#7](https://github.com/SohanMads/fintech-internal-tools-poc/pull/7) | Two edge-case fixes, docs consolidated |
 
-## What needed human review
+## Time
 
-- The user's approval of the first plan added requirements the plan did not spell out: fail-closed demo mode, CSRF on every form including identity switching, foreign keys on every connection, and exact error codes.
-- The header showed Fiona as "Flag Admin (viewer)" while she edited flags. The user asked for per-tool labels.
-- A stale flag form returned to the refund queue instead of the flag. The user caught it.
-- CI was not added until the user asked.
+- Devin build time: 23 minutes from start to the last application code push of PR #1, across 3 review rounds. Later fixes in PRs #4 to #7 are not included.
+- Human time reviewing and directing: ~__ minutes
+
+These numbers are from one session and are not an estimate for other apps.
+
+## Corrections
+
+Each of these was raised in the session and fixed in a later commit or PR.
+
+- Approving the first plan added requirements it did not spell out: fail-closed demo mode, CSRF on every form including identity switching, foreign keys on every connection, and exact error codes.
+- The header showed the flag admin's refund role only. The user asked for per-tool permission labels.
+- A stale flag form linked back to the refund queue instead of the flag. The user caught it.
+- CI was added only after the user asked for it.
 - The README's conflict demo used a request that was already decided. The user caught it.
-- The README read like a completion report. The user asked for a rewrite.
-- The approved status badge on the refund detail page overlapped the requester column at desktop widths. It was caught during the documentation review and fixed in [PR #4](https://github.com/SohanMads/fintech-internal-tools-poc/pull/4).
+- The approved status badge overlapped the requester column. It was found in the documentation screenshots and fixed in PR #4.
 - The session first reported the `main` CI runs as unverified. A later check found they had passed.
+- Devin Review flagged that the draft Playbook left out the `tool_permissions` CHECK migration. The Playbook was corrected.
+- The user reported two edge cases after merge. A stale flag form with an invalid reason was re-rendered with the newer version and the opposite action. A non-ASCII CSRF token caused a 500. Both are fixed with regression tests in PR #7.
 
-## Draft Playbook: Add internal tool #N on the shared foundation
+## Playbook: add internal tool #N
 
-Paste this into Devin as a Playbook.
-
-```markdown
-# Add internal tool #N on the shared foundation
-
-## Inputs the requester must provide
-- Workflow: what a user does, step by step, and what states a record moves through.
-- Roles: who can view, create, change, and approve. Note any no-self-approval rule.
-- Data: fields, types, validation rules, and sample synthetic records.
-- Audit events: which actions must be recorded and what each record must contain.
-- Integrations: any external API the tool calls. Say "none" if there are none.
-
-## Steps
-1. Read README.md, docs/architecture.md, and app/ to learn the shared modules. Do not change refund or flag rules.
-2. Schema and migration: add the tool's tables in app/db.py. Add the audit target column and CHECK changes. Write a migration that keeps existing audit rows and verifies row count and foreign keys.
-3. Rules module: create app/<tool>.py. Put every permission check, validation rule, and state change here. Wrap each change and its audit.record call in one db.transaction.
-4. Concurrency: use a conditional UPDATE on status or a version column. Return 409 when no row changes.
-5. Routes: add GET pages and POST actions in app/main.py. Every POST uses checked_form. No GET request changes data.
-6. Templates: extend base.html. Reuse error.html and _audit_table.html. Add a nav link.
-7. Permission grants: the tool_permissions CHECK constraint lists every allowed permission. Add the new permissions to it in the step 2 migration, then seed demo users that hold them.
-8. Tests in tests/test_<tool>.py:
-   - Permission tests for every role, including forbidden actions (403).
-   - CSRF required on every POST, and GET never changes data.
-   - Concurrency or stale-form test that proves only one write wins (409 for the other).
-   - Audit-rollback test that forces audit.record to fail and checks nothing was saved.
-   - Validation tests for every input rule.
-9. Run python -m pytest -q. All tests must pass.
-10. Browser check: run with DEMO_MODE=true, walk through the workflow as each role, and take screenshots.
-11. Update README.md with the new tool and open a PR.
-
-## Definition of done
-- All new and existing tests pass locally and in CI.
-- Every state change writes an audit event in the same transaction.
-- Permissions are enforced on the server and covered by tests.
-- Screenshots of the main pages are in the PR.
-- The PR description lists what was reused and what was new.
-- No changes to existing tools' rules.
-```
+1. Get the workflow, roles, fields, audit events, and integrations from the requester.
+2. Add the tool's tables, the audit target column, and the new `tool_permissions` values in one migration that keeps existing audit rows.
+3. Put permission checks, validation, and state changes in `app/<tool>.py`. Wrap each change and its `audit.record` call in one `db.transaction`.
+4. Use a conditional `UPDATE` on status or version and return 409 when no row changes.
+5. Add routes in `app/main.py` with `checked_form` on every POST, and templates that extend `base.html`.
+6. Add tests for permissions, CSRF, stale writes, audit rollback, and validation. Run `python -m pytest -q`.
+7. Check the workflow in a browser as each role, update the README, and open a PR.

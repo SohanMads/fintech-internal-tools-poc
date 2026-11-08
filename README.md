@@ -4,11 +4,13 @@ This project explores how a fintech engineering team could use Devin to build in
 
 Refunds were the main workflow. I added flags to see what could be reused when building another tool.
 
+![Decided refund with audit history](docs/screenshots/refund-detail-audit.png)
+
 > Local demo with synthetic data and simulated sign-in. Refund approvals do not move money, and flags do not control a live application.
 
 ## What this replicates from Power Apps (and what it doesn't)
 
-Devin replaces the app builder, not the platform. Power Apps gives a team (a) a fast way to build forms-over-data apps and (b) a managed platform: Entra ID SSO, connectors, Dataverse, hosting, and admin governance (environments, DLP policies). Devin can replace (a). The company would own (b).
+Power Apps gives a team (a) a fast way to build forms-over-data apps and (b) a managed platform: Entra ID SSO, connectors, Dataverse, hosting, and admin governance (environments, DLP policies). This prototype shows that Devin can build application workflows like those in (a), while engineers remain responsible for operating them. It does not provide (b).
 
 | Replicated here | Not replicated (on purpose) |
 |---|---|
@@ -19,13 +21,13 @@ Devin replaces the app builder, not the platform. Power Apps gives a team (a) a 
 | Safe concurrent edits | DLP and environment governance |
 | | Mobile app |
 
-Refunds were chosen over KYC because KYC brings PII, an identity-verification vendor, and compliance review into scope. That makes it the worst app to start with and the last one to migrate.
+KYC was deferred because its sensitive data and verification requirements need separate investigation.
 
 There is no generic form builder. Rebuilding the Power Apps builder misses the point because Devin is the builder.
 
 The flags tool added `app/flags.py` (83 lines), 2 tables, 3 routes, 2 templates, and 18 tests. Sessions, CSRF, database helpers, audit, error handling, layout, and test fixtures came from the refund tool. The audit table needed one migration to add a `flag_id` column.
 
-Target production design: [docs/architecture.md](docs/architecture.md). How the project was built: [docs/devin-workflow.md](docs/devin-workflow.md).
+Prototype architecture and possible production changes: [docs/architecture.md](docs/architecture.md). How the project was built: [docs/devin-workflow.md](docs/devin-workflow.md).
 
 ## Run locally
 
@@ -70,17 +72,11 @@ Pick any seeded user on the sign-in page:
 1. As Olivia, open Refunds, choose New refund request, and enter an amount and a reason.
 2. Switch to Rita, open the request, and approve or reject it with a reason.
 
-![Refund queue](docs/screenshots/refund-queue.png)
-
-![Decided refund with audit history](docs/screenshots/refund-detail-audit.png)
-
 ### Competing reviewers
 
 1. As Olivia, submit a new request.
 2. Open it as Rita in one browser and as Raj in a private window.
 3. Submit a decision in both. The first decision saved wins, and the other reviewer gets a 409 page.
-
-![409 page for the second reviewer](docs/screenshots/refund-conflict-409.png)
 
 ### Change a flag
 
@@ -117,7 +113,15 @@ flowchart TB
 python -m pytest -q
 ```
 
-The 84 tests cover permissions for both tools, concurrent decisions and stale flag forms, CSRF on every form, audit rollback, amount parsing, and the audit table migration. GitHub Actions runs the same command on every pull request and push to `main`.
+Each of the 87 tests runs against a temporary SQLite database. GitHub Actions runs the same command on every pull request and push to `main`.
+
+| File | Covers |
+|---|---|
+| `test_permissions.py` | Role rules, 503 without demo mode, ignored client role and actor, CSRF on every form including malformed tokens, GET never mutates, 404s |
+| `test_validation.py` | Invalid amounts and blank reasons rejected with no rows written, trimming, status labels |
+| `test_decisions_and_audit.py` | Self-approval, sequential and threaded concurrent conflicts, audit consistency, audit-failure rollback, busy-timeout 503, database constraints |
+| `test_flags.py` | Only Fiona edits, Fiona cannot submit or decide refunds, reason required, stale form 409 (also when the reason is invalid), audit-failure rollback, audit target CHECK |
+| `test_money_and_migration.py` | Exact dollar to cents conversion, rejected formats, refund-only audit table migrated with history preserved |
 
 ## Limitations
 
@@ -128,5 +132,3 @@ The 84 tests cover permissions for both tools, concurrent decisions and stale fl
 - On narrow screens, tables scroll horizontally instead of stacking.
 
 Production use would require identity-provider integration, deployment and operations work, and a security review.
-
-Build time and test breakdown: [docs/build-notes.md](docs/build-notes.md).

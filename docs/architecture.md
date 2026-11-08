@@ -1,72 +1,27 @@
-# Target production architecture
+# Architecture
 
-This describes what a real rollout would look like. It is not what the prototype does. The prototype is described in the [README](../README.md).
+## Implemented in the prototype
 
-```mermaid
-flowchart LR
-  User["Employee browser"] --> Proxy["Zero-trust access proxy"]
-  Proxy --> App["Internal tool<br/>(built from platform template)"]
-  Entra["Entra ID<br/>OIDC SSO, groups, SCIM"] --> App
-  subgraph Template["Shared platform template"]
-    Auth["Auth middleware<br/>session and CSRF"]
-    Grants["Unified grants table<br/>principal, app, permission"]
-    Approval["Maker-checker approval primitive"]
-    AuditSvc["Append-only audit service"]
-    UI["Shared UI kit"]
-  end
-  App --- Template
-  App --> PG[("Postgres<br/>per environment")]
-  AuditSvc --> PG
-  AuditSvc --> Lock[("Object-lock storage<br/>audit export")]
-  App --> APIs["Existing service APIs<br/>e.g. processor refund API"]
-  Ticket["Ticket"] --> Devin["Devin session<br/>Knowledge + Playbook"]
-  Devin --> PR["Pull request"] --> CI["CI: tests, SAST,<br/>dependency scan"] --> Review["CODEOWNERS review"] --> Deploy["Deploy to company cloud"]
-  Deploy --> App
-```
+| Concern | Prototype |
+|---|---|
+| Runtime | One local FastAPI process with Jinja2 templates |
+| Database | One SQLite file, foreign keys on, `BEGIN IMMEDIATE` transactions |
+| Identity | Demo identity picker behind `DEMO_MODE`, signed session cookie holding the user ID and CSRF token |
+| Permissions | `users.role` for refunds, `tool_permissions` grants for flags, both loaded from the database on each request |
+| Concurrency | Conditional `UPDATE` on refund status, version check on flags, 409 for the losing write |
+| Audit | `audit_events` written in the same transaction as each change, one nullable foreign key per audited resource |
+| Integrations | None. Approvals change a status only, and nothing reads the flags. |
+| CI | GitHub Actions runs `python -m pytest -q` |
 
-## Identity
+The module layout is in the [README](../README.md#how-it-works).
 
-Users sign in with Entra ID through OIDC SSO. The client already pays for Microsoft, so this adds no new identity vendor. Entra groups map to app permissions. SCIM deprovisioning removes access when someone leaves.
+## Possible production changes
 
-## Shared platform template
+None of these exist in the prototype. Each one depends on the company's existing infrastructure and would need its own design and security review.
 
-Every new app starts from one template repository. It contains:
-
-- Auth middleware with session and CSRF handling.
-- One unified grants table. Each row is a principal (user or group), an app, and a permission.
-- An append-only audit service. It writes to Postgres with UPDATE and DELETE revoked from the app's database role. It also exports to object-lock storage so tampering is detectable.
-- A reusable maker-checker approval primitive. One person submits, a different person approves.
-- A shared UI kit.
-
-## Data
-
-Each environment has its own Postgres database. Internal tools never write directly to the production databases of money movement or KYC systems. They call existing service APIs instead. A refund approval would call the payment processor's refund API with an idempotency key.
-
-## Network
-
-Apps sit behind a zero-trust access proxy. They are not exposed to the public internet.
-
-## CI/CD
-
-Every pull request runs tests, SAST, and dependency scanning. CODEOWNERS review is required before merge. Merged changes deploy to the company's cloud.
-
-## Devin loop
-
-1. A ticket describes the tool or change.
-2. A Devin session picks it up. It uses Knowledge for platform conventions and a "new internal tool" Playbook.
-3. Devin opens a PR.
-4. CI runs.
-5. A human reviews and approves.
-6. The change deploys.
-
-After launch, Devin handles ongoing maintenance: dependency upgrades, migrations, and small changes. Each one goes through the same PR, CI, and review path.
-
-## Prototype vs production
-
-| Concern | Prototype | Production |
-|---|---|---|
-| Database | SQLite file | Postgres per environment |
-| Identity | Demo identity picker | Entra ID SSO |
-| Permissions | `users.role` column plus `tool_permissions` | Unified grants table |
-| Audit | One nullable FK per audited resource | `target_type`/`target_id` once there are more than about 3 audited resource types, with target integrity enforced in app code and tests |
-| Runtime | Local process | Containerized deploy behind the access proxy |
+- **Identity:** replace the demo picker with the company's SSO (for example Entra ID over OIDC, since Power Apps tenants already use it). Map identity-provider groups to app permissions and remove access through deprovisioning.
+- **Permissions:** merge roles and tool grants into one table of principal, app, and permission, so a new tool does not need a schema change.
+- **Database:** move from SQLite to a managed database per environment. Add a migration process and backups.
+- **Audit:** revoke UPDATE and DELETE on the audit table from the app's database role and export events to write-once storage. With more audited resource types, a `target_type`/`target_id` pair avoids a schema change per tool but moves target integrity checks into application code.
+- **Integrations:** call existing service APIs, such as a payment processor's refund API with an idempotency key, instead of writing to other systems' databases.
+- **Hosting and CI:** deploy behind the company's access controls, not the public internet. Add security scanning and required code review to CI.

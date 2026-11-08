@@ -150,3 +150,27 @@ def test_stale_conflict_page_links_to_latest_flag(as_user, conn):
 def test_header_shows_per_tool_permissions(as_user):
     assert "Refunds: viewer · Flags: admin" in as_user("fiona").get("/flags").text
     assert "Refunds: reviewer · Flags: view only" in as_user("rita").get("/flags").text
+
+
+def test_stale_form_with_invalid_reason_conflicts_instead_of_refreshing(as_user, conn):
+    fiona = as_user("fiona")
+    opened = flag_row(conn)
+    assert change(fiona, opened).status_code == 303
+    newer = flag_row(conn)
+    for reason in ("   ", "Corrected reason"):
+        r = change(fiona, opened, reason=reason)
+        assert r.status_code == 409
+        assert "This setting has changed" in r.text
+    assert dict(flag_row(conn)) == dict(newer)
+    assert flag_events(conn, opened["id"]) == 1
+
+
+def test_invalid_reason_rerender_keeps_submitted_version_and_action(as_user, conn):
+    fiona = as_user("fiona")
+    flag = flag_row(conn)
+    r = change(fiona, flag, reason="   ")
+    assert r.status_code == 422
+    assert f'name="version" value="{flag["version"]}"' in r.text
+    assert 'name="desired" value="disable"' in r.text
+    assert dict(flag_row(conn)) == dict(flag)
+    assert flag_events(conn, flag["id"]) == 0
