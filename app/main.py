@@ -96,7 +96,7 @@ def create_app(
         form = await request.form()
         sent = form.get("csrf_token")
         expected = request.session.get("csrf")
-        if not isinstance(sent, str) or not expected or not secrets.compare_digest(sent, expected):
+        if not isinstance(sent, str) or not expected or not secrets.compare_digest(sent.encode(), expected.encode()):
             raise CsrfFailed()
         return form
 

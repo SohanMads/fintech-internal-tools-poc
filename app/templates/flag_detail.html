@@ -21,8 +21,8 @@
   {% if errors %}<p class="notice notice-error" role="alert">Please correct the errors below.</p>{% endif %}
   <form method="post" action="/flags/{{ flag.id }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="version" value="{{ flag.version }}">
-    <input type="hidden" name="desired" value="{{ 'disable' if flag.enabled else 'enable' }}">
+    <input type="hidden" name="version" value="{{ form.get('version', flag.version) }}">
+    <input type="hidden" name="desired" value="{{ form.get('desired', 'disable' if flag.enabled else 'enable') }}">
     <div class="field">
       <label for="reason">Reason for change (required)</label>
       <textarea id="reason" name="reason" rows="3" required {% if errors.reason %}aria-invalid="true" aria-describedby="reason-err"{% endif %}>{{ form.get('reason', '') }}</textarea>

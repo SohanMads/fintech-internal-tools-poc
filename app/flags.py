@@ -58,6 +58,12 @@ def set_flag(conn: sqlite3.Connection, actor, flag_id: int, desired, reason_raw,
         expected_version = int(expected_version_raw)
     except (TypeError, ValueError):
         errors["version"] = "Missing form version. Reload the page."
+    if errors and "version" not in errors:
+        row = conn.execute("SELECT version FROM feature_flags WHERE id = ?", (flag_id,)).fetchone()
+        if row is None:
+            raise NotFound("Flag not found.")
+        if row["version"] != expected_version:
+            raise _stale(flag_id)
     if errors:
         raise ValidationFailed("Please correct the errors below.", errors)
 
