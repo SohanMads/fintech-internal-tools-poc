@@ -1,6 +1,6 @@
 # Cognition Take-Home: Internal tools with Devin
 
-I built this to see whether a fintech engineering team could use Devin to build the kind of internal tools it currently makes in Power Apps. There are two tools in one app: a refund approval workflow and a sandbox feature-flag panel. They share sign-in, permission checks, and audit logging.
+I built this tool to see whether a fintech engineering team could use Devin to build the kind of internal tools it currently makes in Power Apps. There are two tools in one app: a refund approval workflow and a sandbox feature-flag panel. They share sign-in, permission checks, and audit logging.
 
 Refunds were the main workflow. I added flags afterwards to see how much of the first tool a second one could reuse.
 
