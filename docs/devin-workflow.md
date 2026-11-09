@@ -21,7 +21,6 @@ A refund approval workflow with synthetic data, simulated sign-in, server-side p
 ## Time
 
 - Devin build time: 23 minutes from start to the last application code push of PR #1, across 3 review rounds. Later fixes in PRs #4 to #7 are not included.
-- Human time reviewing and directing: ~__ minutes
 
 These numbers are from one session and are not an estimate for other apps.
 
