@@ -27,7 +27,11 @@ There is no generic form builder. Rebuilding the Power Apps builder misses the p
 
 The flags tool added `app/flags.py` (83 lines), 2 tables, 3 routes, 2 templates, and 18 tests. Sessions, CSRF, database helpers, audit, error handling, layout, and test fixtures came from the refund tool. The audit table needed one migration to add a `flag_id` column.
 
-Prototype architecture and possible production changes: [docs/architecture.md](docs/architecture.md). How the project was built: [docs/devin-workflow.md](docs/devin-workflow.md).
+Prototype architecture and possible production changes: [docs/architecture.md](docs/architecture.md).
+
+## Built with Devin
+
+Devin implemented the application, the tests, and the browser checks. I directed the scope, reviewed plans and results, and requested corrections. All changes went through GitHub pull requests with CI.
 
 ## Run locally
 
