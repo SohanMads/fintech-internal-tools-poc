@@ -18,12 +18,12 @@ Power Apps is two things: a quick way to build forms-over-data apps, and a manag
 | Server-side role and permission checks | Dataverse |
 | Approval workflow with no self-approval | Citizen-developer building |
 | Append-only audit trail (enforced by the app) | Managed hosting |
-| Safe concurrent edits | DLP and environment governance |
+| Conflicting refund decisions and stale flag updates are rejected | DLP and environment governance |
 | | Mobile app |
 
 KYC was deferred because its sensitive data and verification requirements need separate investigation.
 
-I didn't build a generic form builder. Here, Devin plays that role.
+I used Devin to implement these workflows directly rather than building a generic form builder.
 
 Flags reused the refund tool's sessions, CSRF handling, database helpers, audit logging, error pages, layout, and test fixtures. The audit table needed one migration to add a `flag_id` column.
 
@@ -31,7 +31,7 @@ Flags reused the refund tool's sessions, CSRF handling, database helpers, audit 
 
 ## Built with Devin
 
-Devin wrote the application, the tests, and the browser checks. I set the scope, reviewed the plans and results, and asked for corrections. Every change went through a pull request with CI.
+Devin wrote the application, the tests, and the browser checks. I set the scope, reviewed the plans and results, and asked for corrections. GitHub Actions runs the test suite on pull requests and pushes to main.
 
 ## Run locally
 
