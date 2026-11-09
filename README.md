@@ -1,8 +1,8 @@
 # Cognition Take-Home: Internal tools with Devin
 
-This project explores how a fintech engineering team could use Devin to build internal tools currently served by Power Apps. It includes a refund approval workflow and a sandbox feature-flag panel, built in one application with shared sessions, permission checks, and audit utilities.
+I built this to see whether a fintech engineering team could use Devin to build the kind of internal tools it currently makes in Power Apps. There are two tools in one app: a refund approval workflow and a sandbox feature-flag panel. They share sign-in, permission checks, and audit logging.
 
-Refunds were the main workflow. I added flags to see what could be reused when building another tool.
+Refunds were the main workflow. I added flags afterwards to see how much of the first tool a second one could reuse.
 
 ![Decided refund with audit history](docs/screenshots/refund-detail-audit.png)
 
@@ -10,7 +10,7 @@ Refunds were the main workflow. I added flags to see what could be reused when b
 
 ## What this replicates from Power Apps (and what it doesn't)
 
-Power Apps gives a team (a) a fast way to build forms-over-data apps and (b) a managed platform: Entra ID SSO, connectors, Dataverse, hosting, and admin governance (environments, DLP policies). This prototype shows that Devin can build application workflows like those in (a), while engineers remain responsible for operating them. It does not provide (b).
+Power Apps is two things: a quick way to build forms-over-data apps, and a managed platform around them (Entra ID sign-in, connectors, Dataverse, hosting, and admin controls such as environments and DLP policies). This prototype only covers the first part. It shows Devin can build workflows like these, but engineers still have to run and maintain them, and none of the platform comes with it.
 
 | Replicated here | Not replicated (on purpose) |
 |---|---|
@@ -23,15 +23,15 @@ Power Apps gives a team (a) a fast way to build forms-over-data apps and (b) a m
 
 KYC was deferred because its sensitive data and verification requirements need separate investigation.
 
-There is no generic form builder. Rebuilding the Power Apps builder misses the point because Devin is the builder.
+I didn't build a generic form builder. Here, Devin plays that role.
 
-The flags tool added `app/flags.py` (89 lines), 2 tables, 3 routes, 2 templates, and 20 tests. Sessions, CSRF, database helpers, audit, error handling, layout, and test fixtures came from the refund tool. The audit table needed one migration to add a `flag_id` column.
+Flags reused the refund tool's sessions, CSRF handling, database helpers, audit logging, error pages, layout, and test fixtures. The audit table needed one migration to add a `flag_id` column.
 
-Prototype architecture and possible production changes: [docs/architecture.md](docs/architecture.md).
+[docs/architecture.md](docs/architecture.md) covers what the prototype implements and what might change for production.
 
 ## Built with Devin
 
-Devin implemented the application, the tests, and the browser checks. I directed the scope, reviewed plans and results, and requested corrections. All changes went through GitHub pull requests with CI.
+Devin wrote the application, the tests, and the browser checks. I set the scope, reviewed the plans and results, and asked for corrections. Every change went through a pull request with CI.
 
 ## Run locally
 
@@ -117,7 +117,7 @@ flowchart TB
 python -m pytest -q
 ```
 
-Each of the 87 tests runs against a temporary SQLite database. GitHub Actions runs the same command on every pull request and push to `main`.
+There are 87 tests, each using its own temporary SQLite database. GitHub Actions runs the same command on every pull request and every push to `main`.
 
 | File | Covers |
 |---|---|
