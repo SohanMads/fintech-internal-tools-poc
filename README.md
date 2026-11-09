@@ -25,7 +25,7 @@ KYC was deferred because its sensitive data and verification requirements need s
 
 There is no generic form builder. Rebuilding the Power Apps builder misses the point because Devin is the builder.
 
-The flags tool added `app/flags.py` (83 lines), 2 tables, 3 routes, 2 templates, and 18 tests. Sessions, CSRF, database helpers, audit, error handling, layout, and test fixtures came from the refund tool. The audit table needed one migration to add a `flag_id` column.
+The flags tool added `app/flags.py` (89 lines), 2 tables, 3 routes, 2 templates, and 20 tests. Sessions, CSRF, database helpers, audit, error handling, layout, and test fixtures came from the refund tool. The audit table needed one migration to add a `flag_id` column.
 
 Prototype architecture and possible production changes: [docs/architecture.md](docs/architecture.md).
 
